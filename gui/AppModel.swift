@@ -21,7 +21,7 @@ final class AppModel: ObservableObject {
   @Published var preserveBootState = true
   @Published var presentedError: PresentedError?
 
-  private let backend: SimSlimBackend?
+  private let backend: SimberthBackend?
   private var hasLoaded = false
   private var lastKnownDisabled: [String: Int]
   private var diskSizeTask: Task<Void, Never>?
@@ -35,7 +35,7 @@ final class AppModel: ObservableObject {
       .compactMapValues { ($0 as? NSNumber)?.intValue } ?? [:]
 
     do {
-      backend = try SimSlimBackend()
+      backend = try SimberthBackend()
     } catch {
       backend = nil
       presentedError = PresentedError(message: error.localizedDescription)
@@ -681,7 +681,7 @@ final class AppModel: ObservableObject {
     }
   }
 
-  private func loadDiskSizes(for snapshot: [SimulatorDevice], backend: SimSlimBackend) async {
+  private func loadDiskSizes(for snapshot: [SimulatorDevice], backend: SimberthBackend) async {
     await withTaskGroup(of: (String, SimulatorDiskMeasurement?).self) { group in
       var nextIndex = 0
       let concurrentMeasurements = min(3, snapshot.count)

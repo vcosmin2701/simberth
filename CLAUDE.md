@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-simslim runs many more iOS simulators on one Mac by disabling the background
+simberth runs many more iOS simulators on one Mac by disabling the background
 daemons a simulator doesn't need, cutting each simulator's memory ~4x. It is a Go
 CLI plus a SwiftUI macOS app that wraps it. Everything is driven through
 `xcrun simctl`; the tool only ever touches the simulators you point it at, never
@@ -13,13 +13,13 @@ the host Mac. macOS-only.
 ## Commands
 
 ```sh
-go build ./cmd/simslim          # build the CLI
+go build ./cmd/simberth          # build the CLI
 go test ./...                   # run all tests (Makefile: make test)
 go test -run TestName ./...     # run a single test
 make check                      # full CI gate — must pass before a PR
 make format                     # gofmt + swift-format (run before committing)
-make app                        # build build/SimSlim.app (Go + swiftc, macOS only)
-open build/SimSlim.app
+make app                        # build build/Simberth.app (Go + swiftc, macOS only)
+open build/Simberth.app
 ```
 
 `make check` runs `go test`, `go vet`, `swift-format lint --strict --recursive gui`,
@@ -32,14 +32,14 @@ runs need Xcode + an iOS runtime.
 
 ## Architecture
 
-Two packages. The repo root is `package simslim`, an importable library holding
-every piece of slimming logic and **no external dependencies**. `cmd/simslim/`
+Two packages. The repo root is `package simberth`, an importable library holding
+every piece of slimming logic and **no external dependencies**. `cmd/simberth/`
 is `package main`, the CLI: `main.go` dispatches `os.Args[1]` to a `cmd*`
 function per subcommand and enforces macOS-only up front.
 
 Anything that talks to a terminal — printing, `--json` encoding via `writeJSON`,
 the interactive wizard in `wizard.go`, `fatal()`, `usage()` — lives in
-`cmd/simslim/`. The library never writes to stdout; it returns values and
+`cmd/simberth/`. The library never writes to stdout; it returns values and
 reports progress through the `Reporter` callback the caller supplies.
 
 Exported identifiers in the root package are the public API, so renaming one is
@@ -53,14 +53,14 @@ feature needs it (e.g. the AMS payment-sheet daemons are in both `store` and
 category lists it. `SlimmableSet()` is the deduplicated union of every label in
 `Categories`.
 `managedSet()` adds each category's `AlwaysEnabled` compatibility services,
-which simslim may only repair back to enabled; these are **the only labels the
+which simberth may only repair back to enabled; these are **the only labels the
 tool may ever disable or enable.** Anything outside those sets is never touched.
 `service_descriptions.go` supplies the short per-daemon explanations shown by
 the GUI; its coverage and length are enforced in `profiles_test.go`.
-`profile_file.go` loads a committed JSON profile (`simslim on --profile <path>`)
+`profile_file.go` loads a committed JSON profile (`simberth on --profile <path>`)
 whose `except`/`keep` arrays mirror the flags of the same name, validates it
 against the allowlist, and resolves it to a `Profile`. The dependency-free
-`profile` command's interactive wizard lives in `cmd/simslim/wizard.go`.
+`profile` command's interactive wizard lives in `cmd/simberth/wizard.go`.
 `features.go` defines `Features`, a finer-grained catalog than `Categories`:
 each feature (push, storekit, universal-links, …) names just the daemons one
 testable capability needs. `doctor` reads a booted simulator's disabled labels
@@ -79,7 +79,7 @@ and reads the state back before reporting persistence. `on` disables the profile
 — that's the memory figure that decides how many simulators fit. `MeasureProcesses`
 keeps the per-process detail (footprint + cpu, from the same snapshot) for the
 `top` drill-down. `fleet.go`'s `FleetSnapshot` composes booted devices + slim
-status + `MeasureMany` into the fleet view; the live TUI is `cmd/simslim/top.go`
+status + `MeasureMany` into the fleet view; the live TUI is `cmd/simberth/top.go`
 (Bubble Tea), which also has a `--json`/non-TTY one-shot fallback. `disk.go`,
 `disk_cleanup.go`, and `disk_inventory.go` handle disk measurement and the
 separate, permanent disk-cleanup feature.
@@ -93,7 +93,7 @@ with `--json` and decodes these types; there is no other IPC.
 
 **The SwiftUI app** (`gui/`) has no Xcode project. `scripts/build-app.sh` compiles
 the Swift sources directly with `swiftc`, cross-builds the Go CLI, bundles it into
-`SimSlim.app/Contents/Resources/simslim`, generates the icon, and ad-hoc codesigns.
+`Simberth.app/Contents/Resources/simberth`, generates the icon, and ad-hoc codesigns.
 The app is a thin front end that shells out to that bundled binary.
 
 ## Safety invariants — preserve these
@@ -117,17 +117,17 @@ The app is a thin front end that shells out to that bundled binary.
 - CLI parsing uses `github.com/urfave/cli/v3`; the `top` command's live TUI uses
   `github.com/charmbracelet/bubbletea` + `lipgloss`. These are the CLI's only
   dependencies — the root library still has none, so importers never inherit a
-  terminal stack. The command tree lives in `cmd/simslim/app.go` (`newApp`);
-  each subcommand's `Action` is a `cmd*` function in `cmd/simslim/main.go` that
+  terminal stack. The command tree lives in `cmd/simberth/app.go` (`newApp`);
+  each subcommand's `Action` is a `cmd*` function in `cmd/simberth/main.go` that
   reads flags via `cmd.Bool/String(...)` and positionals via `cmd.Args()`. Flags may appear before or after positional args
-  (e.g. `simslim on <udid> --except search`) — v3 parses flags anywhere by default.
+  (e.g. `simberth on <udid> --except search`) — v3 parses flags anywhere by default.
   `--set` is a global flag (inherited by every subcommand) registered in its flag
   `Action`. `main.go` still owns `version`/`help`/no-args and the macOS-only guard
   before handing off to the tree, and routes every command error through `fatal()`
-  for the stable `simslim: <msg>` (exit 1); unknown commands exit 2 with usage.
+  for the stable `simberth: <msg>` (exit 1); unknown commands exit 2 with usage.
 - Two timeouts live in `simctl.go`: `ShutdownTimeout` (30s, a const) and `BootTimeout`
   (10min, because a first slim reconfigure boots twice). `BootTimeout` is a package var,
-  not a const, so the CLI's global `--boot-timeout` flag (env `SIMSLIM_BOOT_TIMEOUT`,
+  not a const, so the CLI's global `--boot-timeout` flag (env `SIMBERTH_BOOT_TIMEOUT`,
   wired in `app.go` like `--set`) can raise it for slow CI runners where the per-daemon
   `launchctl` transitions would otherwise blow the deadline mid-reconfigure.
 - Progress for multi-minute operations goes to **stderr** via the `Reporter` callback;

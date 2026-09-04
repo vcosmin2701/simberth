@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build}"
-APP_PATH="$BUILD_DIR/SimSlim.app"
+APP_PATH="$BUILD_DIR/Simberth.app"
 ICON_SOURCE="$ROOT_DIR/gui/Assets/AppIcon.png"
 MACHINE_ARCH="$(uname -m)"
 VERSION="${VERSION:-$(git -C "$ROOT_DIR" describe --tags --always --dirty)}"
@@ -20,7 +20,7 @@ if ! print -r -- "$BUILD_NUMBER" | grep -Eq '^[0-9]+(\.[0-9]+){0,2}$'; then
 fi
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
-  echo "The SimSlim app can only be built on macOS." >&2
+  echo "The Simberth app can only be built on macOS." >&2
   exit 1
 fi
 
@@ -43,9 +43,9 @@ case "$MACHINE_ARCH" in
     ;;
 esac
 
-STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/simslim-app.XXXXXX")"
+STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/simberth-app.XXXXXX")"
 trap 'rm -rf "$STAGING_DIR"' EXIT
-STAGED_APP="$STAGING_DIR/SimSlim.app"
+STAGED_APP="$STAGING_DIR/Simberth.app"
 
 mkdir -p "$STAGED_APP/Contents/MacOS" "$STAGED_APP/Contents/Resources"
 cp "$ROOT_DIR/gui/Info.plist" "$STAGED_APP/Contents/Info.plist"
@@ -53,7 +53,7 @@ plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$STAGED_APP/C
 plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$STAGED_APP/Contents/Info.plist"
 
 echo "Building macOS app icon…"
-ICONSET_DIR="$STAGING_DIR/SimSlim.iconset"
+ICONSET_DIR="$STAGING_DIR/Simberth.iconset"
 mkdir -p "$ICONSET_DIR"
 ICON_VARIANTS=(
   "16 icon_16x16.png"
@@ -73,14 +73,14 @@ for variant in "${ICON_VARIANTS[@]}"; do
   sips -s format png -z "$size" "$size" "$ICON_SOURCE" \
     --out "$ICONSET_DIR/$filename" >/dev/null
 done
-iconutil -c icns "$ICONSET_DIR" -o "$STAGED_APP/Contents/Resources/SimSlim.icns"
+iconutil -c icns "$ICONSET_DIR" -o "$STAGED_APP/Contents/Resources/Simberth.icns"
 
-echo "Building bundled simslim CLI ($MACHINE_ARCH)…"
+echo "Building bundled simberth CLI ($MACHINE_ARCH)…"
 (
   cd "$ROOT_DIR"
   CGO_ENABLED=0 GOOS=darwin GOARCH="$GO_ARCH" \
     go build -trimpath -ldflags "-s -w -X main.version=$VERSION" \
-    -o "$STAGED_APP/Contents/Resources/simslim" ./cmd/simslim
+    -o "$STAGED_APP/Contents/Resources/simberth" ./cmd/simberth
 )
 
 echo "Building SwiftUI app ($MACHINE_ARCH)…"
@@ -90,7 +90,7 @@ xcrun swiftc \
   -parse-as-library \
   -O \
   -target "$MACHINE_ARCH-apple-macos14.0" \
-  -module-name SimSlimApp \
+  -module-name SimberthApp \
   -framework AppKit \
   -framework SwiftUI \
   "$ROOT_DIR/gui/Models.swift" \
@@ -98,10 +98,10 @@ xcrun swiftc \
   "$ROOT_DIR/gui/AppModel.swift" \
   "$ROOT_DIR/gui/SimulatorManagementViews.swift" \
   "$ROOT_DIR/gui/ContentView.swift" \
-  "$ROOT_DIR/gui/SimSlimApp.swift" \
-  -o "$STAGED_APP/Contents/MacOS/SimSlim"
+  "$ROOT_DIR/gui/SimberthApp.swift" \
+  -o "$STAGED_APP/Contents/MacOS/Simberth"
 
-chmod +x "$STAGED_APP/Contents/MacOS/SimSlim" "$STAGED_APP/Contents/Resources/simslim"
+chmod +x "$STAGED_APP/Contents/MacOS/Simberth" "$STAGED_APP/Contents/Resources/simberth"
 codesign --force --deep --sign - "$STAGED_APP" >/dev/null
 
 mkdir -p "$BUILD_DIR"

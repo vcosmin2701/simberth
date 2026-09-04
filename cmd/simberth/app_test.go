@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 )
 
 // runApp runs the CLI with stdout/stderr discarded so command output does not
@@ -23,7 +23,7 @@ func runApp(t *testing.T, args ...string) error {
 	oldStdout, oldStderr := os.Stdout, os.Stderr
 	os.Stdout, os.Stderr = devnull, devnull
 	defer func() { os.Stdout, os.Stderr = oldStdout, oldStderr }()
-	return newApp().Run(context.Background(), append([]string{"simslim"}, args...))
+	return newApp().Run(context.Background(), append([]string{"simberth"}, args...))
 }
 
 // TestAppRegistersDeviceSets verifies the global --set flag registers the extra
@@ -49,13 +49,13 @@ func TestAppRegistersDeviceSets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			simslim.ResetDeviceSets()
-			defer simslim.ResetDeviceSets()
+			simberth.ResetDeviceSets()
+			defer simberth.ResetDeviceSets()
 			err := runApp(t, tt.args...)
 			if (err != nil) != tt.wantError {
 				t.Fatalf("Run(%v) error = %v, wantError %v", tt.args, err, tt.wantError)
 			}
-			gotExtra := simslim.ExtraDeviceSetTokens()
+			gotExtra := simberth.ExtraDeviceSetTokens()
 			if !reflect.DeepEqual(gotExtra, tt.wantExtra) {
 				t.Errorf("registered extra sets = %v, want %v", gotExtra, tt.wantExtra)
 			}
@@ -63,14 +63,14 @@ func TestAppRegistersDeviceSets(t *testing.T) {
 	}
 }
 
-// TestAppBootTimeoutFlag verifies --boot-timeout and its SIMSLIM_BOOT_TIMEOUT env
-// source override simslim.BootTimeout, and that a non-positive duration is rejected.
+// TestAppBootTimeoutFlag verifies --boot-timeout and its SIMBERTH_BOOT_TIMEOUT env
+// source override simberth.BootTimeout, and that a non-positive duration is rejected.
 func TestAppBootTimeoutFlag(t *testing.T) {
 	const def = 10 * time.Minute
 	tests := []struct {
 		name      string
 		args      []string
-		env       string // value for SIMSLIM_BOOT_TIMEOUT, "" to leave unset
+		env       string // value for SIMBERTH_BOOT_TIMEOUT, "" to leave unset
 		want      time.Duration
 		wantError bool
 	}{
@@ -86,20 +86,20 @@ func TestAppBootTimeoutFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			simslim.ResetDeviceSets()
-			defer simslim.ResetDeviceSets()
-			orig := simslim.BootTimeout
-			simslim.BootTimeout = def
-			defer func() { simslim.BootTimeout = orig }()
+			simberth.ResetDeviceSets()
+			defer simberth.ResetDeviceSets()
+			orig := simberth.BootTimeout
+			simberth.BootTimeout = def
+			defer func() { simberth.BootTimeout = orig }()
 			if tt.env != "" {
-				t.Setenv("SIMSLIM_BOOT_TIMEOUT", tt.env)
+				t.Setenv("SIMBERTH_BOOT_TIMEOUT", tt.env)
 			}
 			err := runApp(t, tt.args...)
 			if (err != nil) != tt.wantError {
 				t.Fatalf("Run(%v) error = %v, wantError %v", tt.args, err, tt.wantError)
 			}
-			if simslim.BootTimeout != tt.want {
-				t.Errorf("BootTimeout = %v, want %v", simslim.BootTimeout, tt.want)
+			if simberth.BootTimeout != tt.want {
+				t.Errorf("BootTimeout = %v, want %v", simberth.BootTimeout, tt.want)
 			}
 		})
 	}
@@ -124,8 +124,8 @@ func TestAppFlagParsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			simslim.ResetDeviceSets()
-			defer simslim.ResetDeviceSets()
+			simberth.ResetDeviceSets()
+			defer simberth.ResetDeviceSets()
 			err := runApp(t, tt.args...)
 			if (err != nil) != tt.wantError {
 				t.Fatalf("Run(%v) error = %v, wantError %v", tt.args, err, tt.wantError)
@@ -134,14 +134,14 @@ func TestAppFlagParsing(t *testing.T) {
 	}
 }
 
-// TestAppSpawnTimeoutFlag verifies --spawn-timeout and its SIMSLIM_SPAWN_TIMEOUT env
-// source override simslim.SpawnTimeout, and that a non-positive duration is rejected.
+// TestAppSpawnTimeoutFlag verifies --spawn-timeout and its SIMBERTH_SPAWN_TIMEOUT env
+// source override simberth.SpawnTimeout, and that a non-positive duration is rejected.
 func TestAppSpawnTimeoutFlag(t *testing.T) {
 	const def = 2 * time.Minute
 	tests := []struct {
 		name      string
 		args      []string
-		env       string // value for SIMSLIM_SPAWN_TIMEOUT, "" to leave unset
+		env       string // value for SIMBERTH_SPAWN_TIMEOUT, "" to leave unset
 		want      time.Duration
 		wantError bool
 	}{
@@ -157,20 +157,20 @@ func TestAppSpawnTimeoutFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			simslim.ResetDeviceSets()
-			defer simslim.ResetDeviceSets()
-			orig := simslim.SpawnTimeout
-			simslim.SpawnTimeout = def
-			defer func() { simslim.SpawnTimeout = orig }()
+			simberth.ResetDeviceSets()
+			defer simberth.ResetDeviceSets()
+			orig := simberth.SpawnTimeout
+			simberth.SpawnTimeout = def
+			defer func() { simberth.SpawnTimeout = orig }()
 			if tt.env != "" {
-				t.Setenv("SIMSLIM_SPAWN_TIMEOUT", tt.env)
+				t.Setenv("SIMBERTH_SPAWN_TIMEOUT", tt.env)
 			}
 			err := runApp(t, tt.args...)
 			if (err != nil) != tt.wantError {
 				t.Fatalf("Run(%v) error = %v, wantError %v", tt.args, err, tt.wantError)
 			}
-			if simslim.SpawnTimeout != tt.want {
-				t.Errorf("SpawnTimeout = %v, want %v", simslim.SpawnTimeout, tt.want)
+			if simberth.SpawnTimeout != tt.want {
+				t.Errorf("SpawnTimeout = %v, want %v", simberth.SpawnTimeout, tt.want)
 			}
 		})
 	}

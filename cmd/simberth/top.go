@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 )
 
 const (
@@ -67,13 +67,13 @@ var sortKeys = map[string]sortCol{
 type (
 	tickMsg  time.Time
 	fleetMsg struct {
-		out simslim.TopOutput
+		out simberth.TopOutput
 		err error
 	}
 	diskMsg map[string]int64
 	procMsg struct {
 		udid  string
-		procs []simslim.Process
+		procs []simberth.Process
 		err   error
 	}
 )
@@ -83,7 +83,7 @@ type topModel struct {
 	view          topView
 	width, height int
 
-	sims       []simslim.TopSim
+	sims       []simberth.TopSim
 	total      int64
 	cursor     int
 	cursorUDID string // the selected sim; keeps the cursor anchored across live re-sorts
@@ -98,7 +98,7 @@ type topModel struct {
 
 	selUDID string
 	selName string
-	procs   []simslim.Process
+	procs   []simberth.Process
 	procErr error
 	scroll  int
 }
@@ -114,7 +114,7 @@ func tickCmd() tea.Cmd {
 func (m topModel) refreshFleet() tea.Cmd {
 	ctx := m.ctx
 	return func() tea.Msg {
-		out, err := simslim.FleetSnapshot(ctx, false)
+		out, err := simberth.FleetSnapshot(ctx, false)
 		return fleetMsg{out: out, err: err}
 	}
 }
@@ -130,7 +130,7 @@ func (m topModel) refreshDisk(udids []string) tea.Cmd {
 	return func() tea.Msg {
 		out := diskMsg{}
 		for _, u := range udids {
-			if du, err := simslim.DeviceDiskUsage(ctx, u); err == nil {
+			if du, err := simberth.DeviceDiskUsage(ctx, u); err == nil {
 				out[u] = du.Bytes
 			}
 		}
@@ -144,7 +144,7 @@ func (m topModel) refreshProcs() tea.Cmd {
 	}
 	ctx, udid := m.ctx, m.selUDID
 	return func() tea.Msg {
-		procs, err := simslim.MeasureProcesses(ctx, udid)
+		procs, err := simberth.MeasureProcesses(ctx, udid)
 		return procMsg{udid: udid, procs: procs, err: err}
 	}
 }
@@ -288,7 +288,7 @@ func (m *topModel) setSort(col sortCol) {
 
 // applySort orders the fleet by the active column and direction.
 func (m *topModel) applySort() {
-	less := func(a, b simslim.TopSim) bool {
+	less := func(a, b simberth.TopSim) bool {
 		switch m.sortCol {
 		case sortCPU:
 			return simCPU(a) < simCPU(b)
@@ -317,7 +317,7 @@ func (m *topModel) applySort() {
 // sortProcs orders the drill-down. Only RAM/CPU/name apply to processes; other
 // columns fall back to RAM so a fleet sort choice still behaves sensibly here.
 func (m *topModel) sortProcs() {
-	less := func(a, b simslim.Process) bool {
+	less := func(a, b simberth.Process) bool {
 		switch m.sortCol {
 		case sortCPU:
 			return a.CPU < b.CPU
@@ -357,7 +357,7 @@ func (m topModel) fleetView() string {
 		return b.String()
 	}
 	if len(m.sims) == 0 {
-		b.WriteString(topFaintStyle.Render("No booted simulators. Boot one with `simslim boot <udid>`."))
+		b.WriteString(topFaintStyle.Render("No booted simulators. Boot one with `simberth boot <udid>`."))
 		b.WriteByte('\n')
 		return b.String() + m.footer()
 	}
@@ -487,28 +487,28 @@ func (m topModel) visibleRows() int {
 
 // --- sort value helpers (absent memory/status sorts last under descending) ---
 
-func simBytes(s simslim.TopSim) int64 {
+func simBytes(s simberth.TopSim) int64 {
 	if s.Memory == nil {
 		return -1
 	}
 	return s.Memory.Bytes
 }
 
-func simCPU(s simslim.TopSim) float64 {
+func simCPU(s simberth.TopSim) float64 {
 	if s.Memory == nil {
 		return -1
 	}
 	return s.Memory.CPU
 }
 
-func simProcs(s simslim.TopSim) int {
+func simProcs(s simberth.TopSim) int {
 	if s.Memory == nil {
 		return -1
 	}
 	return s.Memory.Processes
 }
 
-func simDisabled(s simslim.TopSim) int {
+func simDisabled(s simberth.TopSim) int {
 	if s.ManagedDisabled == nil {
 		return -1
 	}
@@ -538,7 +538,7 @@ func osLess(a, b string) bool {
 
 // --- formatting helpers ---
 
-func stateLabel(s simslim.TopSim) string {
+func stateLabel(s simberth.TopSim) string {
 	if s.StatusError != "" || s.ManagedDisabled == nil {
 		return "?"
 	}
@@ -552,28 +552,28 @@ func stateLabel(s simslim.TopSim) string {
 	}
 }
 
-func osLabel(s simslim.TopSim) string {
+func osLabel(s simberth.TopSim) string {
 	if s.OSVersion == "" {
 		return "?"
 	}
 	return truncate(s.OSVersion, 6)
 }
 
-func procCount(s simslim.TopSim) string {
+func procCount(s simberth.TopSim) string {
 	if s.Memory == nil {
 		return "—"
 	}
 	return fmt.Sprintf("%d", s.Memory.Processes)
 }
 
-func cpuLabel(s simslim.TopSim) string {
+func cpuLabel(s simberth.TopSim) string {
 	if s.Memory == nil {
 		return "—"
 	}
 	return fmt.Sprintf("%.0f%%", s.Memory.CPU)
 }
 
-func ramLabel(s simslim.TopSim) string {
+func ramLabel(s simberth.TopSim) string {
 	if s.Memory == nil {
 		if s.MemoryError != "" {
 			return "err"
@@ -622,7 +622,7 @@ func clampScroll(scroll, total, rows int) int {
 
 // --- static (non-TTY) renderers, reused by cmdTop when stdout is piped ---
 
-func staticFleet(out simslim.TopOutput) string {
+func staticFleet(out simberth.TopOutput) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%-30s %-6s %-6s %5s %6s %8s\n", "SIMULATOR", "OS", "STATE", "PROC", "CPU", "RAM")
 	for _, s := range out.Sims {
@@ -634,7 +634,7 @@ func staticFleet(out simslim.TopOutput) string {
 	return b.String()
 }
 
-func staticProcs(tp simslim.TopProcesses) string {
+func staticProcs(tp simberth.TopProcesses) string {
 	var b strings.Builder
 	name := tp.Name
 	if name == "" {

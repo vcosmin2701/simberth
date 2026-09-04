@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"bytes"
@@ -24,9 +24,9 @@ type cloneFilesystem struct {
 	cloneLogDirectory     string
 }
 
-// desiredCloneDisabled copies only labels SimSlim is allowed to disable. A
+// desiredCloneDisabled copies only labels Simberth is allowed to disable. A
 // source may contain unrelated or obsolete launchd overrides; cloning must not
-// turn those into new SimSlim-managed state or propagate an unsafe override.
+// turn those into new Simberth-managed state or propagate an unsafe override.
 func desiredCloneDisabled(disabled map[string]bool) map[string]bool {
 	slimmable := SlimmableSet()
 	desired := make(map[string]bool)
@@ -41,7 +41,7 @@ func desiredCloneDisabled(disabled map[string]bool) map[string]bool {
 // CloneDevice prepares a point-in-time copy. CoreSimulator's raw clone carries
 // absolute source paths in symlinks and generated registries, so the source
 // remains shut down until direct links have been rebased, app registrations
-// have been rebuilt, the copied SimSlim service profile has been verified, and
+// have been rebuilt, the copied Simberth service profile has been verified, and
 // the running clone has been audited for open source paths. Any preparation
 // failure deletes the clone rather than returning it as ready.
 func CloneDevice(ctx context.Context, udid, name string) (newUDID string, err error) {
@@ -151,9 +151,9 @@ func CloneDevice(ctx context.Context, udid, name string) (newUDID string, err er
 }
 
 // RepairClonedDevice removes direct filesystem links and open paths into the
-// supplied source from a clone made by an older SimSlim version. CoreSimulator
+// supplied source from a clone made by an older Simberth version. CoreSimulator
 // does not expose clone lineage, so callers must supply the actual source UDID.
-// It preserves the target's apps, app data, settings, SimSlim profile, and
+// It preserves the target's apps, app data, settings, Simberth profile, and
 // original boot state. A failed repair leaves the target shutdown.
 func RepairClonedDevice(ctx context.Context, sourceUDID, cloneUDID string) (err error) {
 	if sourceUDID == cloneUDID {
@@ -408,7 +408,7 @@ func rebaseClonePropertyLists(paths cloneFilesystem) error {
 }
 
 func replaceRegularFile(path string, contents []byte, mode os.FileMode) error {
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".simslim-rebase-")
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".simberth-rebase-")
 	if err != nil {
 		return err
 	}
@@ -640,7 +640,7 @@ func rebasePath(path, sourceRoot, cloneRoot string) (string, bool) {
 }
 
 func replaceSymlink(path, target string) error {
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".simslim-relink-")
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".simberth-relink-")
 	if err != nil {
 		return err
 	}

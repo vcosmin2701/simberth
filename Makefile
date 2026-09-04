@@ -3,7 +3,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty)
 
 cli:
-	go build -ldflags "-X main.version=$(VERSION)" -o simslim ./cmd/simslim
+	go build -ldflags "-X main.version=$(VERSION)" -o simberth ./cmd/simberth
 
 app:
 	./scripts/build-app.sh

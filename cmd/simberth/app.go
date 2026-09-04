@@ -9,7 +9,7 @@ import (
 
 	cli "github.com/urfave/cli/v3"
 
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 )
 
 // newApp builds the command tree. It handles subcommand dispatch, the global
@@ -30,12 +30,12 @@ func newApp() *cli.Command {
 		{Name: "verify", Flags: []cli.Flag{
 			jsonFlag(),
 			&cli.StringFlag{Name: "profile", Usage: "verify against a JSON profile file (mutually exclusive with --except/--keep)"},
-			&cli.StringFlag{Name: "except", Usage: "comma-separated category IDs the profile leaves fully enabled (see `simslim profiles`)"},
+			&cli.StringFlag{Name: "except", Usage: "comma-separated category IDs the profile leaves fully enabled (see `simberth profiles`)"},
 			&cli.StringFlag{Name: "keep", Usage: "comma-separated launchd labels the profile keeps running"},
 		}, Action: cmdVerify},
 		{Name: "doctor", Flags: []cli.Flag{
 			jsonFlag(),
-			&cli.StringFlag{Name: "requires", Usage: "comma-separated feature IDs the simulator must support (see `simslim doctor --list`)"},
+			&cli.StringFlag{Name: "requires", Usage: "comma-separated feature IDs the simulator must support (see `simberth doctor --list`)"},
 			&cli.BoolFlag{Name: "list", Usage: "list every checkable feature and its backing daemons"},
 		}, Action: cmdDoctor},
 		{Name: "measure", Flags: []cli.Flag{jsonFlag()}, Action: cmdMeasure},
@@ -58,7 +58,7 @@ func newApp() *cli.Command {
 		{Name: "delete", Flags: []cli.Flag{jsonFlag()}, Action: cmdDelete},
 		{Name: "on", Flags: []cli.Flag{
 			&cli.StringFlag{Name: "profile", Usage: "apply a JSON profile file (mutually exclusive with --except/--keep)"},
-			&cli.StringFlag{Name: "except", Usage: "comma-separated category IDs to leave fully enabled (see `simslim profiles`)"},
+			&cli.StringFlag{Name: "except", Usage: "comma-separated category IDs to leave fully enabled (see `simberth profiles`)"},
 			&cli.StringFlag{Name: "keep", Usage: "comma-separated launchd labels to keep running"},
 			preserveBootStateFlag("return an initially shutdown simulator to shutdown after reconfiguration"),
 		}, Action: cmdOn},
@@ -78,7 +78,7 @@ func newApp() *cli.Command {
 	}
 
 	return &cli.Command{
-		Name:         "simslim",
+		Name:         "simberth",
 		HideHelp:     true, // root help/usage is handled by main's usage()
 		HideVersion:  true, // version output is handled by main
 		OnUsageError: onUsageError,
@@ -87,12 +87,12 @@ func newApp() *cli.Command {
 				Name:  "set",
 				Usage: "also scan these device sets (comma-separated name|path)",
 				Action: func(_ context.Context, _ *cli.Command, value string) error {
-					sets := simslim.SplitList(value)
+					sets := simberth.SplitList(value)
 					if len(sets) == 0 {
 						return fmt.Errorf("--set requires a device set name (such as `testing`) or a path")
 					}
 					for _, set := range sets {
-						simslim.RegisterDeviceSet(set)
+						simberth.RegisterDeviceSet(set)
 					}
 					return nil
 				},
@@ -100,26 +100,26 @@ func newApp() *cli.Command {
 			&cli.DurationFlag{
 				Name:    "boot-timeout",
 				Usage:   "max time for a simulator to boot and reconfigure (e.g. 10m, 15m); raise it for slow CI runners",
-				Sources: cli.EnvVars("SIMSLIM_BOOT_TIMEOUT"),
-				Value:   simslim.BootTimeout,
+				Sources: cli.EnvVars("SIMBERTH_BOOT_TIMEOUT"),
+				Value:   simberth.BootTimeout,
 				Action: func(_ context.Context, _ *cli.Command, d time.Duration) error {
 					if d <= 0 {
 						return fmt.Errorf("--boot-timeout must be a positive duration (such as `15m`)")
 					}
-					simslim.BootTimeout = d
+					simberth.BootTimeout = d
 					return nil
 				},
 			},
 			&cli.DurationFlag{
 				Name:    "spawn-timeout",
 				Usage:   "max time for a single launchctl transition inside the simulator (e.g. 2m, 5m); raise it for slow hosts",
-				Sources: cli.EnvVars("SIMSLIM_SPAWN_TIMEOUT"),
-				Value:   simslim.SpawnTimeout,
+				Sources: cli.EnvVars("SIMBERTH_SPAWN_TIMEOUT"),
+				Value:   simberth.SpawnTimeout,
 				Action: func(_ context.Context, _ *cli.Command, d time.Duration) error {
 					if d <= 0 {
 						return fmt.Errorf("--spawn-timeout must be a positive duration (such as `2m`)")
 					}
-					simslim.SpawnTimeout = d
+					simberth.SpawnTimeout = d
 					return nil
 				},
 			},

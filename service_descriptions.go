@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 // serviceDescriptionByLabel gives the GUI a short, user-facing explanation for
 // every daemon that can be controlled individually. These descriptions explain

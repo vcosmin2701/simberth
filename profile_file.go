@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// SlimProfile is the on-disk profile applied with `simslim on --profile <path>`.
+// SlimProfile is the on-disk profile applied with `simberth on --profile <path>`.
 // Except and Keep mirror the `--except` and `--keep` flags.
 type SlimProfile struct {
 	Name        string   `json:"name,omitempty"`
@@ -40,7 +40,7 @@ func (sp SlimProfile) resolve(path string) (Profile, error) {
 			continue
 		}
 		if _, ok := CategoryByID(id); !ok {
-			return Profile{}, fmt.Errorf("profile %s: unknown category %q (see `simslim profiles`)", path, id)
+			return Profile{}, fmt.Errorf("profile %s: unknown category %q (see `simberth profiles`)", path, id)
 		}
 		p.ExceptCategories[id] = true
 	}
@@ -50,7 +50,7 @@ func (sp SlimProfile) resolve(path string) (Profile, error) {
 			continue
 		}
 		if !slimmable[label] {
-			return Profile{}, fmt.Errorf("profile %s: %q is not a daemon any category disables (see `simslim profiles`)", path, label)
+			return Profile{}, fmt.Errorf("profile %s: %q is not a daemon any category disables (see `simberth profiles`)", path, label)
 		}
 		p.Keep[label] = true
 	}
@@ -82,7 +82,7 @@ func BuildProfile(profilePath, except, keep string) (Profile, error) {
 	p := Profile{ExceptCategories: map[string]bool{}, Keep: map[string]bool{}}
 	for _, id := range SplitList(except) {
 		if _, ok := CategoryByID(id); !ok {
-			return Profile{}, fmt.Errorf("unknown category %q (see `simslim profiles`)", id)
+			return Profile{}, fmt.Errorf("unknown category %q (see `simberth profiles`)", id)
 		}
 		p.ExceptCategories[id] = true
 	}

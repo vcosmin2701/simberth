@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>SimSlim</string>
+	<string>Simberth</string>
 	<key>CFBundleExecutable</key>
-	<string>SimSlim</string>
+	<string>Simberth</string>
 	<key>CFBundleIdentifier</key>
-	<string>app.mobai.simslim</string>
+	<string>app.mobai.simberth</string>
 	<key>CFBundleIconFile</key>
-	<string>SimSlim.icns</string>
+	<string>Simberth.icns</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>SimSlim</string>
+	<string>Simberth</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

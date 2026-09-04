@@ -1,11 +1,11 @@
 # Disk cleanup safety model
 
 Service slimming and disk cleanup have different guarantees. Service slimming
-is reversible with `simslim off`. Disk cleanup permanently removes files.
+is reversible with `simberth off`. Disk cleanup permanently removes files.
 
 ## Boundary
 
-simslim only considers data below one exact simulator's device-data directory:
+simberth only considers data below one exact simulator's device-data directory:
 
 ```text
 ~/Library/Developer/CoreSimulator/Devices/<UDID>/data
@@ -14,7 +14,7 @@ simslim only considers data below one exact simulator's device-data directory:
 It never changes an iOS runtime. Apple describes a Simulator runtime as an OS
 package used by multiple simulator devices, and modern runtime disk images are
 kept in system-managed protected storage. Built-in apps and core OS language
-resources therefore are not per-device savings and are outside simslim's
+resources therefore are not per-device savings and are outside simberth's
 cleanup boundary.
 
 - [Apple: Adding additional simulators](https://developer.apple.com/documentation/safari-developer-tools/adding-additional-simulators)
@@ -103,7 +103,7 @@ prior apps, settings, credentials, user data, logs, and cache contents are not
 restored.
 
 If a shared runtime were modified, erasing a device would not repair it; the
-runtime would need to be reinstalled. simslim prevents that situation by never
+runtime would need to be reinstalled. simberth prevents that situation by never
 allowing runtime paths into a cleanup plan.
 
 ## Implementation safeguards

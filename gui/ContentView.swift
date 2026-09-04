@@ -74,7 +74,7 @@ struct ContentView: View {
             ToolbarActionLabel("Unslim", systemImage: "plus.circle")
           }
           .disabled(model.selectionCount == 0 || model.isBusy)
-          .help("Restore all SimSlim-managed services")
+          .help("Restore all Simberth-managed services")
         }
       } else {
         ToolbarItem(placement: .automatic) {
@@ -197,7 +197,7 @@ struct ContentView: View {
     }
     .alert(item: $model.presentedError) { error in
       Alert(
-        title: Text("SimSlim couldn’t finish"),
+        title: Text("Simberth couldn’t finish"),
         message: Text(error.message),
         dismissButton: .default(Text("OK"))
       )
@@ -386,7 +386,7 @@ struct ContentView: View {
         actionTitle: "Clone Simulator",
         systemImage: "plus.square.on.square",
         explanation:
-          "The clone copies the source simulator’s apps, data, settings, and current SimSlim service profile. SimSlim rebases simulator-local links, rebuilds generated app registrations, and audits the running clone for open paths into the source. SimSlim may briefly boot a shutdown source to read its profile, or briefly shut down a booted source to make the copy. The source returns to its original boot state, and the clone finishes shutdown.",
+          "The clone copies the source simulator’s apps, data, settings, and current Simberth service profile. Simberth rebases simulator-local links, rebuilds generated app registrations, and audits the running clone for open paths into the source. Simberth may briefly boot a shutdown source to read its profile, or briefly shut down a booted source to make the copy. The source returns to its original boot state, and the clone finishes shutdown.",
         initialName: "\(device.name) Copy",
         device: device
       ) { name in
@@ -651,7 +651,7 @@ private struct ProfileSidebar: View {
           .scaledToFit()
           .frame(width: 46, height: 46)
         VStack(alignment: .leading, spacing: 2) {
-          Text("SimSlim")
+          Text("Simberth")
             .font(.title2.bold())
           Text(mode == .memory ? "Service slimming · reversible" : "Disk analysis & cleanup")
             .font(.caption)

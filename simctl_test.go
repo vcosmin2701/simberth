@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"errors"
@@ -39,10 +39,10 @@ func TestNormalizeSimulatorName(t *testing.T) {
 func TestParseBatchOK(t *testing.T) {
 	output := strings.Join([]string{
 		"Warning: Please switch to user/foreground/com.apple.siriactionsd service identifier (rdar://78126471)",
-		"simslim-ok com.apple.siriactionsd",
-		"simslim-fail com.apple.assistantd",
-		"  simslim-ok com.apple.suggestd",
-		"simslim-ok ",
+		"simberth-ok com.apple.siriactionsd",
+		"simberth-fail com.apple.assistantd",
+		"  simberth-ok com.apple.suggestd",
+		"simberth-ok ",
 		"unrelated noise",
 		"",
 	}, "\n")

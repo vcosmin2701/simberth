@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type VerifyResult struct {
 // disable overrides match the profile exactly. The overrides are per-simulator
 // state that is easy to lose silently when a device is erased or recreated, so
 // VerifyProfile detects the drift and callers can re-run `on` (which is
-// idempotent) to repair it. SimSlim-created clones preserve this state.
+// idempotent) to repair it. Simberth-created clones preserve this state.
 func VerifyProfile(ctx context.Context, udid string, p Profile) (VerifyResult, error) {
 	d, err := FindDevice(ctx, udid, "")
 	if err != nil {
@@ -38,7 +38,7 @@ func VerifyProfile(ctx context.Context, udid string, p Profile) (VerifyResult, e
 }
 
 // compareDisabled diffs the currently disabled labels against the desired set,
-// restricted to the managed universe (unmanaged labels are never simslim's
+// restricted to the managed universe (unmanaged labels are never simberth's
 // business and never count as drift).
 func compareDisabled(disabled, desired, managed map[string]bool) VerifyResult {
 	var r VerifyResult

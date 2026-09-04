@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 )
 
 func TestFmtBytes(t *testing.T) {
@@ -29,14 +29,14 @@ func TestStateLabel(t *testing.T) {
 	disabled := func(n int) *int { return &n }
 	tests := []struct {
 		name string
-		sim  simslim.TopSim
+		sim  simberth.TopSim
 		want string
 	}{
-		{"slim", simslim.TopSim{ManagedDisabled: disabled(158), ManagedTotal: 158}, "slim"},
-		{"partial", simslim.TopSim{ManagedDisabled: disabled(40), ManagedTotal: 158}, "part"},
-		{"stock", simslim.TopSim{ManagedDisabled: disabled(0), ManagedTotal: 158}, "stock"},
-		{"unknown", simslim.TopSim{StatusError: "not booted"}, "?"},
-		{"nil", simslim.TopSim{}, "?"},
+		{"slim", simberth.TopSim{ManagedDisabled: disabled(158), ManagedTotal: 158}, "slim"},
+		{"partial", simberth.TopSim{ManagedDisabled: disabled(40), ManagedTotal: 158}, "part"},
+		{"stock", simberth.TopSim{ManagedDisabled: disabled(0), ManagedTotal: 158}, "stock"},
+		{"unknown", simberth.TopSim{StatusError: "not booted"}, "?"},
+		{"nil", simberth.TopSim{}, "?"},
 	}
 	for _, tt := range tests {
 		if got := stateLabel(tt.sim); got != tt.want {
@@ -46,10 +46,10 @@ func TestStateLabel(t *testing.T) {
 }
 
 func TestApplySort(t *testing.T) {
-	sim := func(name string, procs int, bytes int64, cpu float64) simslim.TopSim {
-		return simslim.TopSim{Device: simslim.Device{UDID: name, Name: name}, Memory: &simslim.Measurement{Processes: procs, Bytes: bytes, CPU: cpu}}
+	sim := func(name string, procs int, bytes int64, cpu float64) simberth.TopSim {
+		return simberth.TopSim{Device: simberth.Device{UDID: name, Name: name}, Memory: &simberth.Measurement{Processes: procs, Bytes: bytes, CPU: cpu}}
 	}
-	base := []simslim.TopSim{
+	base := []simberth.TopSim{
 		sim("a", 100, 300, 5),
 		sim("b", 50, 100, 30),
 		sim("c", 200, 200, 1),
@@ -63,7 +63,7 @@ func TestApplySort(t *testing.T) {
 	}
 
 	m := &topModel{disk: map[string]int64{}, sortCol: sortRAM, sortDesc: true}
-	m.sims = append([]simslim.TopSim(nil), base...)
+	m.sims = append([]simberth.TopSim(nil), base...)
 	m.applySort()
 	if got := order(m); got != "acb" { // RAM desc: a=300, c=200, b=100
 		t.Errorf("RAM desc order = %s, want acb", got)
@@ -106,11 +106,11 @@ func TestOSLess(t *testing.T) {
 }
 
 func TestReanchor(t *testing.T) {
-	sim := func(name string, bytes int64) simslim.TopSim {
-		return simslim.TopSim{Device: simslim.Device{UDID: name, Name: name}, Memory: &simslim.Measurement{Bytes: bytes}}
+	sim := func(name string, bytes int64) simberth.TopSim {
+		return simberth.TopSim{Device: simberth.Device{UDID: name, Name: name}, Memory: &simberth.Measurement{Bytes: bytes}}
 	}
 	m := &topModel{disk: map[string]int64{}, sortCol: sortRAM, sortDesc: true}
-	m.sims = []simslim.TopSim{sim("a", 300), sim("b", 200), sim("c", 100)}
+	m.sims = []simberth.TopSim{sim("a", 300), sim("b", 200), sim("c", 100)}
 	m.cursor, m.cursorUDID = 1, "b"
 
 	// b's RAM overtakes a's; after re-sort the cursor must follow b to row 0.
@@ -130,9 +130,9 @@ func TestReanchor(t *testing.T) {
 }
 
 func TestStaticFleet(t *testing.T) {
-	mem := &simslim.Measurement{Processes: 70, Bytes: 900 * 1 << 20, CPU: 12}
-	out := simslim.TopOutput{
-		Sims:       []simslim.TopSim{{Device: simslim.Device{UDID: "ABCD1234-5678", Name: "iPhone 15"}, Memory: mem}},
+	mem := &simberth.Measurement{Processes: 70, Bytes: 900 * 1 << 20, CPU: 12}
+	out := simberth.TopOutput{
+		Sims:       []simberth.TopSim{{Device: simberth.Device{UDID: "ABCD1234-5678", Name: "iPhone 15"}, Memory: mem}},
 		TotalBytes: 900 * 1 << 20,
 	}
 	got := staticFleet(out)

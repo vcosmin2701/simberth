@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @main
-struct SimSlimApp: App {
+struct SimberthApp: App {
   @StateObject private var model = AppModel()
 
   var body: some Scene {

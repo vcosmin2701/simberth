@@ -1,4 +1,4 @@
-module github.com/mobai-app/simslim
+module github.com/vcosmin2701/simberth
 
 go 1.26
 

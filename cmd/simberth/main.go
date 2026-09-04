@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 	cli "github.com/urfave/cli/v3"
 )
 
@@ -28,7 +28,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "-v", "--version", "version":
-		fmt.Printf("simslim %s\n", version)
+		fmt.Printf("simberth %s\n", version)
 		return
 	case "-h", "--help", "help":
 		usage()
@@ -36,7 +36,7 @@ func main() {
 	}
 
 	if runtime.GOOS != "darwin" {
-		fatal("simslim only works on macOS (it drives Apple's iOS simulators).")
+		fatal("simberth only works on macOS (it drives Apple's iOS simulators).")
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -52,7 +52,7 @@ func cmdList(ctx context.Context, cmd *cli.Command) error {
 	if cmd.Args().Len() != 0 {
 		return fmt.Errorf("list takes no arguments")
 	}
-	devices, err := simslim.ListDevices(ctx)
+	devices, err := simberth.ListDevices(ctx)
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,8 @@ func cmdList(ctx context.Context, cmd *cli.Command) error {
 		}
 		return devices[i].Name < devices[j].Name
 	})
-	managed := len(simslim.SlimmableSet())
-	memoryByUDID := map[string]simslim.Measurement{}
+	managed := len(simberth.SlimmableSet())
+	memoryByUDID := map[string]simberth.Measurement{}
 	memoryErrors := map[string]string{}
 	if jsonOutput {
 		bootedUDIDs := make([]string, 0)
@@ -81,12 +81,12 @@ func cmdList(ctx context.Context, cmd *cli.Command) error {
 				bootedUDIDs = append(bootedUDIDs, device.UDID)
 			}
 		}
-		memoryByUDID, memoryErrors = simslim.MeasureMany(ctx, bootedUDIDs)
+		memoryByUDID, memoryErrors = simberth.MeasureMany(ctx, bootedUDIDs)
 	}
-	summaries := make([]simslim.DeviceSummary, 0, len(devices))
+	summaries := make([]simberth.DeviceSummary, 0, len(devices))
 	for _, d := range devices {
 		tag := "shutdown"
-		summary := simslim.DeviceSummary{Device: d, ManagedTotal: managed}
+		summary := simberth.DeviceSummary{Device: d, ManagedTotal: managed}
 		if d.State == "Booted" {
 			tag = "booted"
 			if measurement, ok := memoryByUDID[d.UDID]; ok {
@@ -94,7 +94,7 @@ func cmdList(ctx context.Context, cmd *cli.Command) error {
 				summary.Memory = &measured
 			}
 			summary.MemoryError = memoryErrors[d.UDID]
-			if st, _, err := simslim.ReadStatusForDevice(ctx, d); err == nil {
+			if st, _, err := simberth.ReadStatusForDevice(ctx, d); err == nil {
 				tag = fmt.Sprintf("booted · %d/%d slim", st.ManagedDisabled, managed)
 				disabled := st.ManagedDisabled
 				summary.ManagedDisabled = &disabled
@@ -121,12 +121,12 @@ func cmdProfiles(_ context.Context, cmd *cli.Command) error {
 	jsonOutput := cmd.Bool("json")
 	args := cmd.Args().Slice()
 	if len(args) > 1 {
-		return fmt.Errorf("profiles takes at most one category ID (see `simslim profiles`)")
+		return fmt.Errorf("profiles takes at most one category ID (see `simberth profiles`)")
 	}
 	if len(args) == 1 {
-		c, ok := simslim.CategoryByID(args[0])
+		c, ok := simberth.CategoryByID(args[0])
 		if !ok {
-			return fmt.Errorf("unknown category %q (see `simslim profiles`)", args[0])
+			return fmt.Errorf("unknown category %q (see `simberth profiles`)", args[0])
 		}
 		if jsonOutput {
 			return writeJSON(c)
@@ -149,9 +149,9 @@ func cmdProfiles(_ context.Context, cmd *cli.Command) error {
 		return nil
 	}
 	if jsonOutput {
-		return writeJSON(simslim.Categories)
+		return writeJSON(simberth.Categories)
 	}
-	for _, c := range simslim.Categories {
+	for _, c := range simberth.Categories {
 		fmt.Printf("%-14s %s\n", c.ID, c.Name)
 		fmt.Printf("               %d daemons · ~%d MB idle footprint when enabled\n", len(c.Labels), c.ApproxMemoryMB)
 		fmt.Printf("               When disabled: %s\n", c.Downside)
@@ -160,7 +160,7 @@ func cmdProfiles(_ context.Context, cmd *cli.Command) error {
 		}
 	}
 	fmt.Printf("\n%d daemons across %d categories. Core workflow and deadlock-prone daemons are never disabled.\n",
-		len(simslim.SlimmableSet()), len(simslim.Categories))
+		len(simberth.SlimmableSet()), len(simberth.Categories))
 	fmt.Println("Memory estimates are iOS 26.5 clean-boot measurements; they vary by runtime and workload and are not additive.")
 	return nil
 }
@@ -197,7 +197,7 @@ func cmdNewProfile(_ context.Context, cmd *cli.Command) error {
 		}
 		return err
 	}
-	data, err := simslim.MarshalProfile(sp)
+	data, err := simberth.MarshalProfile(sp)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func cmdNewProfile(_ context.Context, cmd *cli.Command) error {
 
 	path := dest
 	if intoDir {
-		path = filepath.Join(dest, simslim.ProfileFileName(sp.Name))
+		path = filepath.Join(dest, simberth.ProfileFileName(sp.Name))
 	}
 	if path == "" {
 		_, err = os.Stdout.Write(data)
@@ -221,7 +221,7 @@ func cmdNewProfile(_ context.Context, cmd *cli.Command) error {
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
-	fmt.Fprintf(os.Stderr, "Wrote %s. Apply it with `simslim on <udid> --profile %s`.\n", path, path)
+	fmt.Fprintf(os.Stderr, "Wrote %s. Apply it with `simberth on <udid> --profile %s`.\n", path, path)
 	return nil
 }
 
@@ -232,7 +232,7 @@ func cmdStatus(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	st, disabled, err := simslim.ReadStatus(ctx, udid)
+	st, disabled, err := simberth.ReadStatus(ctx, udid)
 	if err != nil {
 		return err
 	}
@@ -243,12 +243,12 @@ func cmdStatus(ctx context.Context, cmd *cli.Command) error {
 	case st.ManagedDisabled > 0:
 		verdict = "partially slim"
 	}
-	var dropped []simslim.DroppedCategory
+	var dropped []simberth.DroppedCategory
 	if showDropped {
-		dropped = simslim.DroppedCategories(disabled)
+		dropped = simberth.DroppedCategories(disabled)
 	}
 	if jsonOutput {
-		return writeJSON(simslim.StatusOutput{Status: st, Verdict: verdict, Dropped: dropped})
+		return writeJSON(simberth.StatusOutput{Status: st, Verdict: verdict, Dropped: dropped})
 	}
 	fmt.Printf("%s: %d/%d managed launchd labels disabled (%s)\n", udid, st.ManagedDisabled, st.ManagedTotal, verdict)
 	if showDropped {
@@ -271,11 +271,11 @@ func cmdVerify(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	p, err := simslim.BuildProfile(cmd.String("profile"), cmd.String("except"), cmd.String("keep"))
+	p, err := simberth.BuildProfile(cmd.String("profile"), cmd.String("except"), cmd.String("keep"))
 	if err != nil {
 		return err
 	}
-	r, err := simslim.VerifyProfile(ctx, udid, p)
+	r, err := simberth.VerifyProfile(ctx, udid, p)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func cmdVerify(ctx context.Context, cmd *cli.Command) error {
 		for _, l := range r.Extra {
 			fmt.Printf("  extra   %s (disabled beyond the profile)\n", l)
 		}
-		fmt.Println("Re-run `simslim on` with the same profile to repair.")
+		fmt.Println("Re-run `simberth on` with the same profile to repair.")
 	}
 	if !r.OK {
 		os.Exit(1)
@@ -308,9 +308,9 @@ func cmdDoctor(ctx context.Context, cmd *cli.Command) error {
 			return fmt.Errorf("doctor --list takes no arguments")
 		}
 		if jsonOutput {
-			return writeJSON(simslim.Features)
+			return writeJSON(simberth.Features)
 		}
-		for _, f := range simslim.Features {
+		for _, f := range simberth.Features {
 			fmt.Printf("%-16s %-38s %s\n", f.ID, f.Name, strings.Join(f.Labels, ", "))
 		}
 		return nil
@@ -320,19 +320,19 @@ func cmdDoctor(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	features, err := simslim.ResolveFeatures(simslim.SplitList(cmd.String("requires")))
+	features, err := simberth.ResolveFeatures(simberth.SplitList(cmd.String("requires")))
 	if err != nil {
 		return err
 	}
 	if len(features) == 0 {
-		return fmt.Errorf("doctor needs at least one feature via --requires (see `simslim doctor --list`)")
+		return fmt.Errorf("doctor needs at least one feature via --requires (see `simberth doctor --list`)")
 	}
 
-	_, disabled, err := simslim.ReadStatus(ctx, udid)
+	_, disabled, err := simberth.ReadStatus(ctx, udid)
 	if err != nil {
 		return err
 	}
-	report := simslim.DiagnoseFeatures(features, disabled)
+	report := simberth.DiagnoseFeatures(features, disabled)
 	report.UDID = udid
 
 	if jsonOutput {
@@ -367,7 +367,7 @@ func cmdMeasure(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	m, err := simslim.Measure(ctx, udid)
+	m, err := simberth.Measure(ctx, udid)
 	if err != nil {
 		return err
 	}
@@ -391,17 +391,17 @@ func cmdTop(ctx context.Context, cmd *cli.Command) error {
 	// --json and piped output are one-shot; the live TUI needs a real terminal.
 	if cmd.Bool("json") {
 		if udid != "" {
-			procs, err := simslim.MeasureProcesses(ctx, udid)
+			procs, err := simberth.MeasureProcesses(ctx, udid)
 			if err != nil {
 				return err
 			}
-			out := simslim.TopProcesses{UDID: udid, Name: deviceName(ctx, udid), Processes: procs}
+			out := simberth.TopProcesses{UDID: udid, Name: deviceName(ctx, udid), Processes: procs}
 			for _, p := range procs {
 				out.TotalBytes += p.Bytes
 			}
 			return writeJSON(out)
 		}
-		out, err := simslim.FleetSnapshot(ctx, true)
+		out, err := simberth.FleetSnapshot(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -410,14 +410,14 @@ func cmdTop(ctx context.Context, cmd *cli.Command) error {
 
 	if !isTerminal(os.Stdout) {
 		if udid != "" {
-			procs, err := simslim.MeasureProcesses(ctx, udid)
+			procs, err := simberth.MeasureProcesses(ctx, udid)
 			if err != nil {
 				return err
 			}
-			fmt.Print(staticProcs(simslim.TopProcesses{UDID: udid, Name: deviceName(ctx, udid), Processes: procs}))
+			fmt.Print(staticProcs(simberth.TopProcesses{UDID: udid, Name: deviceName(ctx, udid), Processes: procs}))
 			return nil
 		}
-		out, err := simslim.FleetSnapshot(ctx, false)
+		out, err := simberth.FleetSnapshot(ctx, false)
 		if err != nil {
 			return err
 		}
@@ -434,7 +434,7 @@ func deviceName(ctx context.Context, udid string) string {
 	if udid == "" {
 		return ""
 	}
-	if d, err := simslim.FindDevice(ctx, udid, ""); err == nil {
+	if d, err := simberth.FindDevice(ctx, udid, ""); err == nil {
 		return d.Name
 	}
 	return ""
@@ -453,9 +453,9 @@ func cmdSize(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	measurement, err := simslim.DeviceDiskUsage(tctx, udid)
+	measurement, err := simberth.DeviceDiskUsage(tctx, udid)
 	if err != nil {
 		return err
 	}
@@ -472,9 +472,9 @@ func cmdDiskCategories(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("disk-categories takes no arguments")
 	}
 	if jsonOutput {
-		return writeJSON(simslim.DiskCleanupCategories)
+		return writeJSON(simberth.DiskCleanupCategories)
 	}
-	for _, category := range simslim.DiskCleanupCategories {
+	for _, category := range simberth.DiskCleanupCategories {
 		availability := "cleanable"
 		if !category.CanClean {
 			availability = "measured only"
@@ -491,9 +491,9 @@ func cmdDiskPlan(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	plan, err := simslim.PlanDiskCleanup(tctx, udid)
+	plan, err := simberth.PlanDiskCleanup(tctx, udid)
 	if err != nil {
 		return err
 	}
@@ -524,15 +524,15 @@ func cmdDiskClean(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 	if !cmd.Bool("confirm") {
-		return fmt.Errorf("disk-clean permanently deletes data; pass --confirm after reviewing `simslim disk-plan %s`", udid)
+		return fmt.Errorf("disk-clean permanently deletes data; pass --confirm after reviewing `simberth disk-plan %s`", udid)
 	}
-	categoryIDs := simslim.SplitList(cmd.String("categories"))
-	if _, err := simslim.ValidateDiskCleanupSelection(categoryIDs); err != nil {
+	categoryIDs := simberth.SplitList(cmd.String("categories"))
+	if _, err := simberth.ValidateDiskCleanupSelection(categoryIDs); err != nil {
 		return err
 	}
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	result, err := simslim.CleanDeviceDisk(tctx, udid, categoryIDs, cmd.Bool("preserve-boot-state"))
+	result, err := simberth.CleanDeviceDisk(tctx, udid, categoryIDs, cmd.Bool("preserve-boot-state"))
 	if err != nil {
 		return err
 	}
@@ -549,18 +549,18 @@ func cmdClone(ctx context.Context, cmd *cli.Command) error {
 	if len(args) != 2 {
 		return fmt.Errorf("clone expects a simulator UDID and a new name")
 	}
-	name, err := simslim.NormalizeSimulatorName(args[1])
+	name, err := simberth.NormalizeSimulatorName(args[1])
 	if err != nil {
 		return err
 	}
 
-	tctx, cancel := context.WithTimeout(ctx, simslim.CloneOperationTimeout())
+	tctx, cancel := context.WithTimeout(ctx, simberth.CloneOperationTimeout())
 	defer cancel()
-	newUDID, err := simslim.CloneDevice(tctx, args[0], name)
+	newUDID, err := simberth.CloneDevice(tctx, args[0], name)
 	if err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{Action: "clone", UDID: newUDID, Name: name, SourceUDID: args[0]}
+	result := simberth.SimulatorMutationOutput{Action: "clone", UDID: newUDID, Name: name, SourceUDID: args[0]}
 	if jsonOutput {
 		return writeJSON(result)
 	}
@@ -575,12 +575,12 @@ func cmdRepairClone(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("repair-clone expects the source UDID and cloned simulator UDID")
 	}
 
-	tctx, cancel := context.WithTimeout(ctx, simslim.CloneOperationTimeout())
+	tctx, cancel := context.WithTimeout(ctx, simberth.CloneOperationTimeout())
 	defer cancel()
-	if err := simslim.RepairClonedDevice(tctx, args[0], args[1]); err != nil {
+	if err := simberth.RepairClonedDevice(tctx, args[0], args[1]); err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{
+	result := simberth.SimulatorMutationOutput{
 		Action:     "repair-clone",
 		UDID:       args[1],
 		SourceUDID: args[0],
@@ -602,17 +602,17 @@ func cmdRename(ctx context.Context, cmd *cli.Command) error {
 	if len(args) != 2 {
 		return fmt.Errorf("rename expects a simulator UDID and a new name")
 	}
-	name, err := simslim.NormalizeSimulatorName(args[1])
+	name, err := simberth.NormalizeSimulatorName(args[1])
 	if err != nil {
 		return err
 	}
 
-	tctx, cancel := context.WithTimeout(ctx, simslim.ShutdownTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.ShutdownTimeout)
 	defer cancel()
-	if err := simslim.RenameDevice(tctx, args[0], name); err != nil {
+	if err := simberth.RenameDevice(tctx, args[0], name); err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{Action: "rename", UDID: args[0], Name: name}
+	result := simberth.SimulatorMutationOutput{Action: "rename", UDID: args[0], Name: name}
 	if jsonOutput {
 		return writeJSON(result)
 	}
@@ -627,12 +627,12 @@ func cmdErase(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	if err := simslim.EraseDevice(tctx, udid); err != nil {
+	if err := simberth.EraseDevice(tctx, udid); err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{Action: "erase", UDID: udid}
+	result := simberth.SimulatorMutationOutput{Action: "erase", UDID: udid}
 	if jsonOutput {
 		return writeJSON(result)
 	}
@@ -647,12 +647,12 @@ func cmdDelete(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	if err := simslim.DeleteDevice(tctx, udid); err != nil {
+	if err := simberth.DeleteDevice(tctx, udid); err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{Action: "delete", UDID: udid}
+	result := simberth.SimulatorMutationOutput{Action: "delete", UDID: udid}
 	if jsonOutput {
 		return writeJSON(result)
 	}
@@ -669,11 +669,11 @@ func cmdBoot(ctx context.Context, cmd *cli.Command) error {
 
 	// Resolve the exact device first so a simctl alias such as "all" can never
 	// enter the boot path, consistent with erase/delete.
-	device, err := simslim.FindDevice(ctx, udid, "")
+	device, err := simberth.FindDevice(ctx, udid, "")
 	if err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{Action: "boot", UDID: udid}
+	result := simberth.SimulatorMutationOutput{Action: "boot", UDID: udid}
 	if device.State == "Booted" {
 		if jsonOutput {
 			return writeJSON(result)
@@ -688,9 +688,9 @@ func cmdBoot(ctx context.Context, cmd *cli.Command) error {
 	if !jsonOutput {
 		fmt.Fprintf(os.Stderr, "Booting %s...\n", udid)
 	}
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	if err := simslim.BootAndWait(tctx, device.Set, udid); err != nil {
+	if err := simberth.BootAndWait(tctx, device.Set, udid); err != nil {
 		return err
 	}
 	if jsonOutput {
@@ -709,11 +709,11 @@ func cmdShutdown(ctx context.Context, cmd *cli.Command) error {
 
 	// Resolve the exact device first so a simctl alias such as "all" can never
 	// enter the shutdown path, consistent with erase/delete.
-	device, err := simslim.FindDevice(ctx, udid, "")
+	device, err := simberth.FindDevice(ctx, udid, "")
 	if err != nil {
 		return err
 	}
-	result := simslim.SimulatorMutationOutput{Action: "shutdown", UDID: udid}
+	result := simberth.SimulatorMutationOutput{Action: "shutdown", UDID: udid}
 	if device.State != "Booted" {
 		if jsonOutput {
 			return writeJSON(result)
@@ -722,12 +722,12 @@ func cmdShutdown(ctx context.Context, cmd *cli.Command) error {
 		return nil
 	}
 
-	tctx, cancel := context.WithTimeout(ctx, simslim.ShutdownTimeout)
+	tctx, cancel := context.WithTimeout(ctx, simberth.ShutdownTimeout)
 	defer cancel()
-	if err := simslim.Shutdown(tctx, device.Set, udid); err != nil {
+	if err := simberth.Shutdown(tctx, device.Set, udid); err != nil {
 		return err
 	}
-	if err := simslim.WaitShutdown(tctx, device.Set, udid, simslim.ShutdownTimeout); err != nil {
+	if err := simberth.WaitShutdown(tctx, device.Set, udid, simberth.ShutdownTimeout); err != nil {
 		return err
 	}
 	if jsonOutput {
@@ -744,24 +744,24 @@ func cmdOn(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	p, err := simslim.BuildProfile(cmd.String("profile"), cmd.String("except"), cmd.String("keep"))
+	p, err := simberth.BuildProfile(cmd.String("profile"), cmd.String("except"), cmd.String("keep"))
 	if err != nil {
 		return err
 	}
 	// Resolve once: this pins the device's set (routing every simctl call below,
 	// including a parallel-testing clone), fails fast on an unknown UDID, and
 	// tells us whether to restore a shutdown state afterward.
-	device, err := simslim.FindDevice(ctx, udid, "")
+	device, err := simberth.FindDevice(ctx, udid, "")
 	if err != nil {
 		return err
 	}
 	originallyShutdown := preserveBootState && device.State == "Shutdown"
 
 	fmt.Fprintf(os.Stderr, "Slimming %s: disabling %d background services. The simulator will reboot to apply the changes.\n", udid, len(p.Desired()))
-	report := simslim.Reporter(func(msg string) { fmt.Fprintln(os.Stderr, msg) })
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	report := simberth.Reporter(func(msg string) { fmt.Fprintln(os.Stderr, msg) })
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	changed, operationErr := simslim.EnableSlim(tctx, device.Set, udid, p, report)
+	changed, operationErr := simberth.EnableSlim(tctx, device.Set, udid, p, report)
 	if originallyShutdown {
 		shutdownErr := returnToShutdown(ctx, device.Set, udid)
 		if operationErr != nil && shutdownErr != nil {
@@ -796,16 +796,16 @@ func cmdOff(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	device, err := simslim.FindDevice(ctx, udid, "")
+	device, err := simberth.FindDevice(ctx, udid, "")
 	if err != nil {
 		return err
 	}
 	originallyShutdown := preserveBootState && device.State == "Shutdown"
 	fmt.Fprintf(os.Stderr, "Restoring %s to stock. The simulator will reboot to apply the changes.\n", udid)
-	report := simslim.Reporter(func(msg string) { fmt.Fprintln(os.Stderr, msg) })
-	tctx, cancel := context.WithTimeout(ctx, simslim.BootTimeout)
+	report := simberth.Reporter(func(msg string) { fmt.Fprintln(os.Stderr, msg) })
+	tctx, cancel := context.WithTimeout(ctx, simberth.BootTimeout)
 	defer cancel()
-	changed, operationErr := simslim.DisableSlim(tctx, device.Set, udid, report)
+	changed, operationErr := simberth.DisableSlim(tctx, device.Set, udid, report)
 	if originallyShutdown {
 		shutdownErr := returnToShutdown(ctx, device.Set, udid)
 		if operationErr != nil && shutdownErr != nil {
@@ -835,12 +835,12 @@ func cmdOff(ctx context.Context, cmd *cli.Command) error {
 }
 
 func returnToShutdown(ctx context.Context, set, udid string) error {
-	shutdownCtx, cancel := context.WithTimeout(ctx, simslim.ShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(ctx, simberth.ShutdownTimeout)
 	defer cancel()
-	if err := simslim.Shutdown(shutdownCtx, set, udid); err != nil {
+	if err := simberth.Shutdown(shutdownCtx, set, udid); err != nil {
 		return fmt.Errorf("restore original shutdown state: %w", err)
 	}
-	if err := simslim.WaitShutdown(shutdownCtx, set, udid, simslim.ShutdownTimeout); err != nil {
+	if err := simberth.WaitShutdown(shutdownCtx, set, udid, simberth.ShutdownTimeout); err != nil {
 		return fmt.Errorf("restore original shutdown state: %w", err)
 	}
 	return nil
@@ -848,7 +848,7 @@ func returnToShutdown(ctx context.Context, set, udid string) error {
 
 func oneUDID(args []string) (string, error) {
 	if len(args) != 1 {
-		return "", fmt.Errorf("expected exactly one simulator UDID (see `simslim list`)")
+		return "", fmt.Errorf("expected exactly one simulator UDID (see `simberth list`)")
 	}
 	return args[0], nil
 }
@@ -878,16 +878,16 @@ func humanBytes(b int64) string {
 }
 
 func fatal(msg string) {
-	fmt.Fprintln(os.Stderr, "simslim: "+msg)
+	fmt.Fprintln(os.Stderr, "simberth: "+msg)
 	os.Exit(1)
 }
 
 func usage() {
-	fmt.Print(`simslim runs more iOS simulators on the same Mac by disabling the
+	fmt.Print(`simberth runs more iOS simulators on the same Mac by disabling the
 background daemons a simulator does not need.
 
 USAGE
-  simslim <command> [args]
+  simberth <command> [args]
 
 GLOBAL OPTIONS
   --set <name|path>    Also scan these device sets (comma-separated). The default
@@ -895,11 +895,11 @@ GLOBAL OPTIONS
                        scanned; use this to add a set at a custom path.
   --boot-timeout dur   Max time to boot and reconfigure a simulator (default 10m;
                        e.g. ` + "`15m`" + `). Raise it for slow CI runners. Also settable
-                       via the SIMSLIM_BOOT_TIMEOUT environment variable.
+                       via the SIMBERTH_BOOT_TIMEOUT environment variable.
   --spawn-timeout dur  Max time for a single launchctl transition inside the
                        simulator (default 2m). Raise it for hosts where a busy
                        first boot makes individual spawns very slow. Also
-                       settable via the SIMSLIM_SPAWN_TIMEOUT environment
+                       settable via the SIMBERTH_SPAWN_TIMEOUT environment
                        variable.
 
 COMMANDS
@@ -959,7 +959,7 @@ COMMANDS
   version              Print the version
 
 Disabling is persistent (stored in the simulator's launchd overrides) and fully
-reversible with ` + "`simslim off`" + `. Deadlock-prone daemons are never touched.
+reversible with ` + "`simberth off`" + `. Deadlock-prone daemons are never touched.
 
 A ` + "`--profile`" + ` file is JSON you commit alongside your project and apply per run
 (for example a ci.json and a dev.json). Its "except" and "keep" arrays match the
@@ -971,9 +971,9 @@ Cleanup permanently removes existing cache, log, diagnostic, and temporary-file
 contents; Erase does not bring that history back, although new generated data
 appears as iOS and apps run. Downloaded language data is opt-in and may return
 when a feature needs it. Required Siri assets are informational only because iOS
-restores them after deletion. simslim never modifies the shared iOS runtime.
+restores them after deletion. simberth never modifies the shared iOS runtime.
 
-  https://github.com/mobai-app/simslim · by MobAI (https://mobai.run)
+  https://github.com/vcosmin2701/simberth · by MobAI (https://mobai.run)
 `)
 }
 

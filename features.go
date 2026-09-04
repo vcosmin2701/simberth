@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import "fmt"
 
@@ -67,7 +67,7 @@ func ResolveFeatures(ids []string) ([]Feature, error) {
 	for _, id := range ids {
 		f, ok := featureByID(id)
 		if !ok {
-			return nil, fmt.Errorf("unknown feature %q (see `simslim doctor --list`)", id)
+			return nil, fmt.Errorf("unknown feature %q (see `simberth doctor --list`)", id)
 		}
 		out = append(out, f)
 	}

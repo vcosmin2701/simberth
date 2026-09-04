@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"context"
@@ -14,7 +14,7 @@ func TestEnsureRejectsIOS183BeforeBoot(t *testing.T) {
 	logPath := filepath.Join(dir, "xcrun.log")
 	xcrunPath := filepath.Join(dir, "xcrun")
 	script := `#!/bin/sh
-printf '%s\n' "$*" >> "$SIMSLIM_XCRUN_LOG"
+printf '%s\n' "$*" >> "$SIMBERTH_XCRUN_LOG"
 if [ "$*" = "simctl list devices -j" ]; then
   printf '%s\n' '{"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-18-3":[{"udid":"00000000-0000-0000-0000-000000000034","name":"Issue 34","state":"Shutdown","isAvailable":true,"dataPath":"/tmp/issue-34"}]}}'
   exit 0
@@ -25,7 +25,7 @@ exit 99
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("SIMSLIM_XCRUN_LOG", logPath)
+	t.Setenv("SIMBERTH_XCRUN_LOG", logPath)
 
 	var label string
 	for label = range SlimmableSet() {
@@ -35,7 +35,7 @@ exit 99
 	if changed {
 		t.Fatal("ensure reported a change on an unsupported runtime")
 	}
-	const want = "iOS 18.3 runtime cannot persist launchd disable overrides across reboot; simslim requires iOS 18.5 or newer"
+	const want = "iOS 18.3 runtime cannot persist launchd disable overrides across reboot; simberth requires iOS 18.5 or newer"
 	if err == nil || err.Error() != want {
 		t.Fatalf("ensure error = %v, want %q", err, want)
 	}

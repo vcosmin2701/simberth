@@ -9,23 +9,23 @@ enum BackendError: LocalizedError {
     switch self {
     case .executableMissing:
       return
-        "The bundled simslim command could not be found. Rebuild the app with scripts/build-app.sh."
+        "The bundled simberth command could not be found. Rebuild the app with scripts/build-app.sh."
     case .commandFailed(let arguments, let exitCode, let output):
-      let command = (["simslim"] + arguments).joined(separator: " ")
+      let command = (["simberth"] + arguments).joined(separator: " ")
       return "\(command) exited with status \(exitCode).\n\n\(output)"
     case .invalidResponse(let command, let detail):
-      return "Could not read the response from simslim \(command): \(detail)"
+      return "Could not read the response from simberth \(command): \(detail)"
     }
   }
 }
 
-struct SimSlimBackend {
+struct SimberthBackend {
   private let executableURL: URL
 
   init(bundle: Bundle = .main) throws {
-    if let override = ProcessInfo.processInfo.environment["SIMSLIM_CLI"], !override.isEmpty {
+    if let override = ProcessInfo.processInfo.environment["SIMBERTH_CLI"], !override.isEmpty {
       executableURL = URL(fileURLWithPath: override)
-    } else if let bundled = bundle.url(forResource: "simslim", withExtension: nil) {
+    } else if let bundled = bundle.url(forResource: "simberth", withExtension: nil) {
       executableURL = bundled
     } else {
       throw BackendError.executableMissing

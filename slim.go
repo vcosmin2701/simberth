@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func ensure(ctx context.Context, set, udid string, desired map[string]bool, repo
 			return false, err
 		}
 		if !persistentOverridesSupported(d.OSVersion) {
-			return false, fmt.Errorf("iOS %s runtime cannot persist launchd disable overrides across reboot; simslim requires iOS 18.5 or newer", d.OSVersion)
+			return false, fmt.Errorf("iOS %s runtime cannot persist launchd disable overrides across reboot; simberth requires iOS 18.5 or newer", d.OSVersion)
 		}
 	}
 	report.report("Booting the simulator (a first boot can take up to a minute)...")

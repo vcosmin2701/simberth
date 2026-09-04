@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"errors"

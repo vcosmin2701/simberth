@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 )
 
 // writeProfile writes contents to a temp file and returns its path.
@@ -117,10 +117,10 @@ func TestRunProfileWizardSelectAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runProfileWizard() error = %v", err)
 	}
-	if len(sp.Except) != len(simslim.Categories) {
-		t.Fatalf("Except has %d entries, want %d", len(sp.Except), len(simslim.Categories))
+	if len(sp.Except) != len(simberth.Categories) {
+		t.Fatalf("Except has %d entries, want %d", len(sp.Except), len(simberth.Categories))
 	}
-	for i, c := range simslim.Categories {
+	for i, c := range simberth.Categories {
 		if sp.Except[i] != c.ID {
 			t.Errorf("Except[%d] = %q, want %q", i, sp.Except[i], c.ID)
 		}
@@ -128,20 +128,20 @@ func TestRunProfileWizardSelectAll(t *testing.T) {
 }
 
 // TestWizardOutputRoundTrips confirms a wizard result marshals to JSON that
-// loads back into an equivalent simslim.Profile.
+// loads back into an equivalent simberth.Profile.
 func TestWizardOutputRoundTrips(t *testing.T) {
 	sp, err := runProfileWizard(strings.NewReader("ci\n\n"+arrowDown+space+arrowDown+space+enter), io.Discard, noRawMode)
 	if err != nil {
 		t.Fatalf("runProfileWizard() error = %v", err)
 	}
-	data, err := simslim.MarshalProfile(sp)
+	data, err := simberth.MarshalProfile(sp)
 	if err != nil {
-		t.Fatalf("simslim.MarshalProfile() error = %v", err)
+		t.Fatalf("simberth.MarshalProfile() error = %v", err)
 	}
 	path := writeProfile(t, string(data))
-	p, err := simslim.LoadSlimProfile(path)
+	p, err := simberth.LoadSlimProfile(path)
 	if err != nil {
-		t.Fatalf("simslim.LoadSlimProfile() error = %v", err)
+		t.Fatalf("simberth.LoadSlimProfile() error = %v", err)
 	}
 	want := map[string]bool{"siri": true, "search": true}
 	if !reflect.DeepEqual(p.ExceptCategories, want) {

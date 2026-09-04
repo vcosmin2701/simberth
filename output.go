@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 // DeviceSummary is the stable, machine-readable representation used by the
 // macOS app and other integrations. managedDisabled is omitted for shutdown
@@ -56,7 +56,7 @@ type DiskMeasurement struct {
 	Bytes int64 `json:"bytes"`
 }
 
-// TopSim is one booted simulator's live resource snapshot for `simslim top`.
+// TopSim is one booted simulator's live resource snapshot for `simberth top`.
 type TopSim struct {
 	Device
 	ManagedDisabled *int         `json:"managedDisabled,omitempty"`

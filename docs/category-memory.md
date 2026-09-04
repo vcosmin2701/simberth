@@ -11,7 +11,7 @@ memory budgets or guarantees.
 - Baseline: a fully slim clean boot, median of five samples after a 20-second settle
 - Category run: a clean boot with only that category kept enabled, median of
   three samples after a 15-second settle
-- Measurement: `simslim measure`, which sums process `phys_footprint`
+- Measurement: `simberth measure`, which sums process `phys_footprint`
 
 The final fully slim baseline was 1,113.4 MiB. Category estimates are each
 category run's median minus that baseline, rounded to a useful GUI value.

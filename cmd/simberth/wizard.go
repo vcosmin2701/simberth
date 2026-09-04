@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mobai-app/simslim"
+	"github.com/vcosmin2701/simberth"
 )
 
 // errWizardCancelled signals the user quit the builder; callers exit cleanly.
@@ -66,10 +66,10 @@ func terminalRows(stty func(...string) *exec.Cmd) int {
 	return n
 }
 
-// runProfileWizard interactively assembles a simslim.SlimProfile. Prompts go to out,
+// runProfileWizard interactively assembles a simberth.SlimProfile. Prompts go to out,
 // kept off stdout so the JSON stays redirectable. enterRaw switches the terminal
 // into per-keystroke mode and reports its height (a no-op in tests).
-func runProfileWizard(in io.Reader, out io.Writer, enterRaw func() (func(), int, error)) (simslim.SlimProfile, error) {
+func runProfileWizard(in io.Reader, out io.Writer, enterRaw func() (func(), int, error)) (simberth.SlimProfile, error) {
 	r := bufio.NewReader(in)
 	readLine := func(label string) string {
 		fmt.Fprint(out, label)
@@ -84,18 +84,18 @@ func runProfileWizard(in io.Reader, out io.Writer, enterRaw func() (func(), int,
 
 	restore, rows, err := enterRaw()
 	if err != nil {
-		return simslim.SlimProfile{}, err
+		return simberth.SlimProfile{}, err
 	}
 	defer restore()
 
 	except, keep, cancelled := selectProfile(r, out, rows)
 	if cancelled {
-		return simslim.SlimProfile{}, errWizardCancelled
+		return simberth.SlimProfile{}, errWizardCancelled
 	}
 
 	// Catalog order, and drop keeps inside an enabled feature (redundant).
 	var exceptIDs, keptLabels []string
-	for _, c := range simslim.Categories {
+	for _, c := range simberth.Categories {
 		if except[c.ID] {
 			exceptIDs = append(exceptIDs, c.ID)
 			continue
@@ -106,7 +106,7 @@ func runProfileWizard(in io.Reader, out io.Writer, enterRaw func() (func(), int,
 			}
 		}
 	}
-	return simslim.SlimProfile{Name: name, Description: description, Except: exceptIDs, Keep: keptLabels}, nil
+	return simberth.SlimProfile{Name: name, Description: description, Except: exceptIDs, Keep: keptLabels}, nil
 }
 
 // key is a normalized keystroke from readKey.
@@ -163,7 +163,7 @@ func selectProfile(r *bufio.Reader, out io.Writer, termRows int) (except, keep m
 	except = map[string]bool{}
 	keep = map[string]bool{}
 	header := []string{
-		"simslim.Features to keep enabled — everything unchecked is slimmed.",
+		"simberth.Features to keep enabled — everything unchecked is slimmed.",
 		"[x] whole feature kept · [~] some daemons kept",
 	}
 	footer := "↑/↓ move · space keep feature · → pick daemons · a all · n none · enter save · q cancel"
@@ -184,13 +184,13 @@ func selectProfile(r *bufio.Reader, out io.Writer, termRows int) (except, keep m
 		case k == keyCancel, k == keyRune && (ch == 'q' || ch == 'Q'):
 			return nil, nil, true
 		case k == keySpace:
-			toggleMember(except, simslim.Categories[cursor].ID)
+			toggleMember(except, simberth.Categories[cursor].ID)
 		case k == keyRight, k == keyRune && ch == 'l':
-			if selectDaemons(r, out, simslim.Categories[cursor], keep, termRows) {
+			if selectDaemons(r, out, simberth.Categories[cursor], keep, termRows) {
 				return nil, nil, true
 			}
 		case k == keyRune && (ch == 'a' || ch == 'A'):
-			for _, c := range simslim.Categories {
+			for _, c := range simberth.Categories {
 				except[c.ID] = true
 			}
 		case k == keyRune && (ch == 'n' || ch == 'N'):
@@ -203,7 +203,7 @@ func selectProfile(r *bufio.Reader, out io.Writer, termRows int) (except, keep m
 
 // selectDaemons runs one feature's daemon checklist, mutating keep in place. ←/h
 // returns to the feature list; Ctrl-C aborts the whole wizard (via cancelled).
-func selectDaemons(r *bufio.Reader, out io.Writer, c simslim.Category, keep map[string]bool, termRows int) (cancelled bool) {
+func selectDaemons(r *bufio.Reader, out io.Writer, c simberth.Category, keep map[string]bool, termRows int) (cancelled bool) {
 	header := []string{
 		c.Name + " — keep individual daemons enabled.",
 		"Unchecked daemons in this feature are slimmed.",
@@ -242,8 +242,8 @@ func selectDaemons(r *bufio.Reader, out io.Writer, c simslim.Category, keep map[
 // categoryRows renders the feature list. Marker: [x] fully kept, [~] some daemons
 // kept, [ ] slimmed.
 func categoryRows(except, keep map[string]bool) []string {
-	rows := make([]string, len(simslim.Categories))
-	for i, c := range simslim.Categories {
+	rows := make([]string, len(simberth.Categories))
+	for i, c := range simberth.Categories {
 		box := "[ ]"
 		suffix := ""
 		switch {
@@ -261,7 +261,7 @@ func categoryRows(except, keep map[string]bool) []string {
 }
 
 // daemonRows renders one feature's daemons with a [x]/[ ] keep marker.
-func daemonRows(c simslim.Category, keep map[string]bool) []string {
+func daemonRows(c simberth.Category, keep map[string]bool) []string {
 	rows := make([]string, len(c.Labels))
 	for i, l := range c.Labels {
 		box := "[ ]"
@@ -277,7 +277,7 @@ func daemonRows(c simslim.Category, keep map[string]bool) []string {
 	return rows
 }
 
-func categoryKeepCount(c simslim.Category, keep map[string]bool) int {
+func categoryKeepCount(c simberth.Category, keep map[string]bool) int {
 	n := 0
 	for _, l := range c.Labels {
 		if keep[l] {

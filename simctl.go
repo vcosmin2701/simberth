@@ -1,4 +1,4 @@
-package simslim
+package simberth
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 const ShutdownTimeout = 30 * time.Second
 
 // BootTimeout bounds a full boot-and-reconfigure (boots twice on a first slim); a
-// var, not a const, so `--boot-timeout` / SIMSLIM_BOOT_TIMEOUT can raise it for CI.
+// var, not a const, so `--boot-timeout` / SIMBERTH_BOOT_TIMEOUT can raise it for CI.
 var BootTimeout = 10 * time.Minute
 
 // Device is a simulator as reported by `simctl list`.
@@ -362,7 +362,7 @@ func parseDisabled(output string) map[string]bool {
 // can stall for many minutes. A per-spawn bound turns one stuck spawn into a
 // retryable failure instead of letting it consume the whole reconfigure
 // budget; the label is retried on a later pass once the device has settled.
-// A var, not a const, so SIMSLIM_SPAWN_TIMEOUT can raise it for slow hosts.
+// A var, not a const, so SIMBERTH_SPAWN_TIMEOUT can raise it for slow hosts.
 var SpawnTimeout = 2 * time.Minute
 
 // applyPasses is how many times applyDelta walks the remaining labels.
@@ -396,7 +396,7 @@ const batchScript = `[ -n "$SIMULATOR_ROOT" ] && export DYLD_ROOT_PATH="$SIMULAT
 action=$1; wave=$2; shift 2
 n=0
 for l in "$@"; do
-  { launchctl "$action" "system/$l" && echo "simslim-ok $l" || echo "simslim-fail $l"; } &
+  { launchctl "$action" "system/$l" && echo "simberth-ok $l" || echo "simberth-fail $l"; } &
   n=$((n + 1))
   [ $((n % wave)) -eq 0 ] && wait
 done
@@ -411,7 +411,7 @@ exit 0`
 func runBatch(ctx context.Context, set, udid, action string, labels []string) map[string]bool {
 	spawnCtx, cancel := context.WithTimeout(ctx, SpawnTimeout)
 	defer cancel()
-	args := simctlArgs(set, "spawn", udid, "/bin/sh", "-c", batchScript, "simslim-batch",
+	args := simctlArgs(set, "spawn", udid, "/bin/sh", "-c", batchScript, "simberth-batch",
 		action, fmt.Sprint(batchWave))
 	args = append(args, labels...)
 	out, _ := exec.CommandContext(spawnCtx, "xcrun", args...).CombinedOutput()
@@ -422,7 +422,7 @@ func runBatch(ctx context.Context, set, udid, action string, labels []string) ma
 func parseBatchOK(output string) map[string]bool {
 	ok := map[string]bool{}
 	for _, line := range strings.Split(output, "\n") {
-		if label, found := strings.CutPrefix(strings.TrimSpace(line), "simslim-ok "); found && label != "" {
+		if label, found := strings.CutPrefix(strings.TrimSpace(line), "simberth-ok "); found && label != "" {
 			ok[label] = true
 		}
 	}

@@ -11,7 +11,7 @@ on:
         type: string
 
 env:
-  SIMSLIM_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+  SIMBERTH_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
@@ -27,45 +27,45 @@ jobs:
       - name: Build
         if: github.event_name == 'push'
         run: |
-          SIMSLIM_VERSION="${SIMSLIM_RELEASE_TAG#v}"
+          SIMBERTH_VERSION="${SIMBERTH_RELEASE_TAG#v}"
           go test ./...
-          go build -ldflags "-X main.version=${SIMSLIM_VERSION}" -o simslim ./cmd/simslim
-          codesign --force --sign - simslim
-          tar -czf "simslim-${SIMSLIM_RELEASE_TAG}-macos-arm64.tar.gz" simslim
-          shasum -a 256 "simslim-${SIMSLIM_RELEASE_TAG}-macos-arm64.tar.gz"
+          go build -ldflags "-X main.version=${SIMBERTH_VERSION}" -o simberth ./cmd/simberth
+          codesign --force --sign - simberth
+          tar -czf "simberth-${SIMBERTH_RELEASE_TAG}-macos-arm64.tar.gz" simberth
+          shasum -a 256 "simberth-${SIMBERTH_RELEASE_TAG}-macos-arm64.tar.gz"
       - name: Build Homebrew bottle
         run: |
-          SIMSLIM_SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${SIMSLIM_RELEASE_TAG}.tar.gz"
-          SIMSLIM_SOURCE_TARBALL="${RUNNER_TEMP}/simslim-source.tar.gz"
-          SIMSLIM_BUILD_TAP="mobai-app/simslim-release"
+          SIMBERTH_SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${SIMBERTH_RELEASE_TAG}.tar.gz"
+          SIMBERTH_SOURCE_TARBALL="${RUNNER_TEMP}/simberth-source.tar.gz"
+          SIMBERTH_BUILD_TAP="mobai-app/simberth-release"
 
-          curl --fail --location --retry 3 "${SIMSLIM_SOURCE_URL}" --output "${SIMSLIM_SOURCE_TARBALL}"
-          SIMSLIM_SOURCE_SHA256="$(shasum -a 256 "${SIMSLIM_SOURCE_TARBALL}" | cut -d ' ' -f 1)"
+          curl --fail --location --retry 3 "${SIMBERTH_SOURCE_URL}" --output "${SIMBERTH_SOURCE_TARBALL}"
+          SIMBERTH_SOURCE_SHA256="$(shasum -a 256 "${SIMBERTH_SOURCE_TARBALL}" | cut -d ' ' -f 1)"
 
-          brew tap-new --no-git "${SIMSLIM_BUILD_TAP}"
-          SIMSLIM_FORMULA="$(brew --repository "${SIMSLIM_BUILD_TAP}")/Formula/simslim.rb"
-          mkdir -p "$(dirname "${SIMSLIM_FORMULA}")"
+          brew tap-new --no-git "${SIMBERTH_BUILD_TAP}"
+          SIMBERTH_FORMULA="$(brew --repository "${SIMBERTH_BUILD_TAP}")/Formula/simberth.rb"
+          mkdir -p "$(dirname "${SIMBERTH_FORMULA}")"
           sed \
-            -e "s|@SOURCE_URL@|${SIMSLIM_SOURCE_URL}|g" \
-            -e "s|@SOURCE_SHA256@|${SIMSLIM_SOURCE_SHA256}|g" \
-            packaging/homebrew/simslim.rb.in > "${SIMSLIM_FORMULA}"
+            -e "s|@SOURCE_URL@|${SIMBERTH_SOURCE_URL}|g" \
+            -e "s|@SOURCE_SHA256@|${SIMBERTH_SOURCE_SHA256}|g" \
+            packaging/homebrew/simberth.rb.in > "${SIMBERTH_FORMULA}"
 
-          brew install --build-bottle "${SIMSLIM_BUILD_TAP}/simslim"
-          brew test "${SIMSLIM_BUILD_TAP}/simslim"
+          brew install --build-bottle "${SIMBERTH_BUILD_TAP}/simberth"
+          brew test "${SIMBERTH_BUILD_TAP}/simberth"
           brew bottle \
             --json \
             --no-rebuild \
-            --root-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${SIMSLIM_RELEASE_TAG}" \
-            "${SIMSLIM_BUILD_TAP}/simslim"
+            --root-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${SIMBERTH_RELEASE_TAG}" \
+            "${SIMBERTH_BUILD_TAP}/simberth"
 
           # brew uses a double dash locally; custom HTTP bottle URLs use one.
-          for SIMSLIM_BOTTLE in simslim--*.bottle*.tar.gz; do
-            mv "${SIMSLIM_BOTTLE}" "${SIMSLIM_BOTTLE/--/-}"
+          for SIMBERTH_BOTTLE in simberth--*.bottle*.tar.gz; do
+            mv "${SIMBERTH_BOTTLE}" "${SIMBERTH_BOTTLE/--/-}"
           done
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.SIMSLIM_RELEASE_TAG }}
+          tag_name: ${{ env.SIMBERTH_RELEASE_TAG }}
           files: |
-            simslim-*-macos-arm64.tar.gz
-            simslim-*.bottle*.tar.gz
+            simberth-*-macos-arm64.tar.gz
+            simberth-*.bottle*.tar.gz
