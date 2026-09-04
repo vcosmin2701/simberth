@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/vcosmin2701/simberth"
 	cli "github.com/urfave/cli/v3"
+	"github.com/vcosmin2701/simberth"
 )
 
 // version is overwritten at build time via -ldflags "-X main.version=...".

@@ -39,6 +39,7 @@ func newApp() *cli.Command {
 			&cli.BoolFlag{Name: "list", Usage: "list every checkable feature and its backing daemons"},
 		}, Action: cmdDoctor},
 		{Name: "measure", Flags: []cli.Flag{jsonFlag()}, Action: cmdMeasure},
+		uiCommand(jsonFlag),
 		{Name: "top", Flags: []cli.Flag{jsonFlag()}, Action: cmdTop},
 		{Name: "size", Flags: []cli.Flag{jsonFlag()}, Action: cmdSize},
 		{Name: "disk-categories", Flags: []cli.Flag{jsonFlag()}, Action: cmdDiskCategories},

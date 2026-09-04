@@ -4,11 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-simberth runs many more iOS simulators on one Mac by disabling the background
-daemons a simulator doesn't need, cutting each simulator's memory ~4x. It is a Go
-CLI plus a SwiftUI macOS app that wraps it. Everything is driven through
-`xcrun simctl`; the tool only ever touches the simulators you point it at, never
-the host Mac. macOS-only.
+simberth runs a fleet of iOS simulators, each driven by its own Claude agent, and
+shows what they're testing. It is a **fork of
+[simslim](https://github.com/MobAI-App/simslim)** (MIT, Interlap/MobAI) and stacks
+two things:
+
+1. **Inherited from simslim:** disabling the background daemons a simulator doesn't
+   need, cutting each simulator's memory ~4x so a laptop fits a screenful of them.
+   Everything is driven through `xcrun simctl`; the tool only ever touches the
+   simulators you point it at, never the host Mac. macOS-only.
+2. **Added by this fork:** agent orchestration (fleet lease, run/step model,
+   NDJSON event stream), a TypeScript agent runner built on the Claude Agent SDK,
+   simulator UI control via the AXe CLI, and a Runs section in the macOS app.
+
+**Working with upstream.** `upstream` remote is MobAI-App/simslim. Keep the root
+package's exported API unchanged so upstream merges stay mechanical; put new
+orchestration code in new files/packages rather than editing inherited ones where
+you reasonably can.
 
 ## Commands
 
