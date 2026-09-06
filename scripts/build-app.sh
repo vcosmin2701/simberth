@@ -94,9 +94,12 @@ xcrun swiftc \
   -framework AppKit \
   -framework SwiftUI \
   "$ROOT_DIR/gui/Models.swift" \
+  "$ROOT_DIR/gui/RunModels.swift" \
   "$ROOT_DIR/gui/Backend.swift" \
+  "$ROOT_DIR/gui/RunBackend.swift" \
   "$ROOT_DIR/gui/AppModel.swift" \
   "$ROOT_DIR/gui/SimulatorManagementViews.swift" \
+  "$ROOT_DIR/gui/RunsView.swift" \
   "$ROOT_DIR/gui/ContentView.swift" \
   "$ROOT_DIR/gui/SimberthApp.swift" \
   -o "$STAGED_APP/Contents/MacOS/Simberth"

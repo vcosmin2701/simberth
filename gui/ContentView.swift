@@ -7,6 +7,7 @@ struct ContentView: View {
   @State private var searchIsExpanded = false
   @State private var managementSheet: SimulatorManagementSheet?
   @State private var slimmingMode: SlimmingMode = .memory
+  @State private var section: AppSection = .simulators
 
   private var filteredDevices: [SimulatorDevice] {
     guard !searchText.isEmpty else { return model.devices }
@@ -38,6 +39,34 @@ struct ContentView: View {
   }
 
   var body: some View {
+    VStack(spacing: 0) {
+      sectionPicker
+      Divider()
+      switch section {
+      case .simulators: simulatorsSection
+      case .runs: RunsView()
+      }
+    }
+  }
+
+  private var sectionPicker: some View {
+    HStack {
+      Picker("Section", selection: $section) {
+        ForEach(AppSection.allCases) { option in
+          Label(option.rawValue, systemImage: option.systemImage).tag(option)
+        }
+      }
+      .pickerStyle(.segmented)
+      .labelsHidden()
+      .fixedSize()
+      Spacer()
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 8)
+    .background(.regularMaterial)
+  }
+
+  private var simulatorsSection: some View {
     NavigationSplitView {
       ProfileSidebar(mode: $slimmingMode)
         .navigationSplitViewColumnWidth(min: 340, ideal: 390, max: 460)
