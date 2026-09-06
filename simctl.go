@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -534,4 +536,50 @@ func WaitShutdown(ctx context.Context, set, udid string, timeout time.Duration) 
 		time.Sleep(500 * time.Millisecond)
 	}
 	return fmt.Errorf("timed out waiting for %s to shut down", udid)
+}
+
+// InstallApp installs a built .app bundle onto a simulator. The bundle must be
+// a simulator build; installing a device build fails with an architecture error
+// that simctl reports verbatim.
+func InstallApp(ctx context.Context, set, udid, appPath string) error {
+	if _, err := os.Stat(appPath); err != nil {
+		return fmt.Errorf("app bundle %s: %w", appPath, err)
+	}
+	_, err := xcrun(ctx, simctlArgs(set, "install", udid, appPath)...)
+	return err
+}
+
+// BundleIDForApp reads CFBundleIdentifier out of a .app bundle's Info.plist, so
+// a caller can install and launch an app knowing only its path.
+func BundleIDForApp(ctx context.Context, appPath string) (string, error) {
+	plist := filepath.Join(appPath, "Info.plist")
+	out, err := exec.CommandContext(ctx, "plutil", "-extract", "CFBundleIdentifier", "raw", "-o", "-", plist).Output()
+	if err != nil {
+		return "", fmt.Errorf("read CFBundleIdentifier from %s: %w", plist, err)
+	}
+	id := strings.TrimSpace(string(out))
+	if id == "" {
+		return "", fmt.Errorf("%s has an empty CFBundleIdentifier", plist)
+	}
+	return id, nil
+}
+
+// LaunchApp launches an installed app by bundle identifier.
+func LaunchApp(ctx context.Context, set, udid, bundleID string) error {
+	_, err := xcrun(ctx, simctlArgs(set, "launch", udid, bundleID)...)
+	return err
+}
+
+// TerminateApp stops a running app. A not-running app is not an error, so a
+// caller can reset an app to a known state without checking first.
+func TerminateApp(ctx context.Context, set, udid, bundleID string) error {
+	out, err := exec.CommandContext(ctx, "xcrun", simctlArgs(set, "terminate", udid, bundleID)...).CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if strings.Contains(msg, "found nothing to terminate") || strings.Contains(msg, "not running") {
+			return nil
+		}
+		return fmt.Errorf("simctl terminate: %w: %s", err, msg)
+	}
+	return nil
 }

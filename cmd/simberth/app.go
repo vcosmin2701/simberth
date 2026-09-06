@@ -40,6 +40,8 @@ func newApp() *cli.Command {
 		}, Action: cmdDoctor},
 		{Name: "measure", Flags: []cli.Flag{jsonFlag()}, Action: cmdMeasure},
 		uiCommand(jsonFlag),
+		runCommand(jsonFlag),
+		replayCommand(jsonFlag),
 		{Name: "top", Flags: []cli.Flag{jsonFlag()}, Action: cmdTop},
 		{Name: "size", Flags: []cli.Flag{jsonFlag()}, Action: cmdSize},
 		{Name: "disk-categories", Flags: []cli.Flag{jsonFlag()}, Action: cmdDiskCategories},
