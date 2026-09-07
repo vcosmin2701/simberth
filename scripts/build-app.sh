@@ -83,6 +83,20 @@ echo "Building bundled simberth CLI ($MACHINE_ARCH)…"
     -o "$STAGED_APP/Contents/Resources/simberth" ./cmd/simberth
 )
 
+echo "Bundling agent runner…"
+# The agent runner is Node, not Go, so it ships as sources plus its production
+# dependencies. Without this the bundled CLI resolves no entrypoint and every
+# run fails with MODULE_NOT_FOUND.
+AGENT_DEST="$STAGED_APP/Contents/Resources/agent"
+mkdir -p "$AGENT_DEST/src"
+cp "$ROOT_DIR/agent/src/index.mjs" "$AGENT_DEST/src/"
+cp "$ROOT_DIR/agent/package.json" "$AGENT_DEST/"
+if [[ -d "$ROOT_DIR/agent/node_modules" ]]; then
+  cp -R "$ROOT_DIR/agent/node_modules" "$AGENT_DEST/node_modules"
+else
+  echo "warning: agent/node_modules is missing; run (cd agent && npm install)" >&2
+fi
+
 echo "Building SwiftUI app ($MACHINE_ARCH)…"
 xcrun swiftc \
   -swift-version 5 \

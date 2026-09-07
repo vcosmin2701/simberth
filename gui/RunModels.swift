@@ -196,5 +196,17 @@ struct ScenarioDraft: Equatable {
   var simCount: Int = 2
   var slim: Bool = true
 
+  /// Seeds the form from the environment, so a demo or a UI test can launch the
+  /// app with a scenario already filled in.
+  static func fromEnvironment() -> ScenarioDraft {
+    var draft = ScenarioDraft()
+    let env = ProcessInfo.processInfo.environment
+    if let text = env["SIMBERTH_SCENARIO"] { draft.text = text }
+    if let app = env["SIMBERTH_APP"] { draft.appPath = app }
+    if let count = env["SIMBERTH_SIMS"], let value = Int(count) { draft.simCount = value }
+    if let slim = env["SIMBERTH_SLIM"] { draft.slim = slim != "0" && slim != "false" }
+    return draft
+  }
+
   var isRunnable: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }

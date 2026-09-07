@@ -5,7 +5,7 @@ import SwiftUI
 /// untouched by anything happening here.
 @MainActor
 final class RunsModel: ObservableObject {
-  @Published var draft = ScenarioDraft()
+  @Published var draft = ScenarioDraft.fromEnvironment()
   @Published private(set) var run: LiveRun?
   @Published private(set) var isRunning = false
   @Published var selectedUDID: String?

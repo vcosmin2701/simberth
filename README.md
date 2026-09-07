@@ -89,6 +89,10 @@ simberth off <udid>       # put it back to stock
 simberth status <udid>    # managed launchd-label state (not a process count)
 simberth verify <udid> --profile ci.json   # exact profile match; non-zero on drift
 simberth doctor <udid> --requires push,storekit,universal-links
+simberth run --scenario "..." --sims 4   # drive N simulators with agents
+simberth replay runs/<id>/replay-<udid>.json   # re-run it deterministically, no model
+simberth ui describe <udid>   # the actionable elements on screen
+simberth ui tap <udid> --label "Sign In"
 simberth measure <udid>   # a booted simulator's memory footprint
 simberth top              # live fleet monitor; enter a sim for per-daemon RAM/CPU
 simberth size <udid>      # total allocated simulator size
@@ -239,6 +243,43 @@ simberth verify <udid> --profile ci.json || simberth on <udid> --profile ci.json
 Where `doctor` answers "do the features my tests need still work?", `verify`
 answers "is this simulator in exactly the slim state I configured?". Supports
 `--json`.
+
+## Running agents
+
+```sh
+simberth run \
+  --scenario "Sign in with test@example.com, then confirm the home screen loads" \
+  --app ~/Build/MyApp.app \
+  --sims 4
+```
+
+Each simulator is slimmed, booted, given the app, and handed to its own Claude
+agent. Agents run concurrently — that is what the slimming is for. Every tool
+call becomes a step with a screenshot, streamed as NDJSON under `--json` and
+persisted to `~/Library/Application Support/simberth/runs/<id>/`.
+
+The agent reads the screen through the accessibility tree rather than pixels,
+and simberth distills that tree before the model sees it: a stock iOS home
+screen is ~113k tokens of raw JSON but ~1.5k once reduced to the elements you
+can actually act on. That 75x difference is what makes a turn affordable.
+
+An agent must end with a verdict it can justify from what it saw:
+
+```
+VERDICT: PASS Home screen loaded with the account name in the header
+VERDICT: FAIL Expected a 'Continue' button; scrolled the whole list and found none
+```
+
+Each run also records `replay-<udid>.json` — just the acting steps, addressed by
+accessibility label. Replaying needs no model and no API key:
+
+```sh
+simberth replay runs/20260907-084955/replay-<udid>.json
+```
+
+A recorded run replays in seconds where the agent took a minute, which is what
+makes it usable in CI. Explore once, replay forever; re-record when the UI
+changes enough to break it.
 
 ## Disk cleanup
 

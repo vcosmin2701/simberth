@@ -40,12 +40,18 @@ func AgentEntrypoint() string {
 	if override := strings.TrimSpace(os.Getenv("SIMBERTH_AGENT")); override != "" {
 		return override
 	}
+	// Next to the executable covers the app bundle, where build-app.sh copies
+	// the runner into Contents/Resources/agent alongside the CLI.
 	if exe, err := os.Executable(); err == nil {
+		if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = resolved
+		}
 		candidate := filepath.Join(filepath.Dir(exe), "agent", "src", "index.mjs")
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate
 		}
 	}
+	// Then the source tree, for `go run` and a locally built CLI.
 	if wd, err := os.Getwd(); err == nil {
 		candidate := filepath.Join(wd, "agent", "src", "index.mjs")
 		if _, err := os.Stat(candidate); err == nil {
@@ -53,6 +59,19 @@ func AgentEntrypoint() string {
 		}
 	}
 	return "agent/src/index.mjs"
+}
+
+// currentExecutable resolves this process's own binary, so a spawned agent
+// calls back into the same CLI rather than whatever `simberth` PATH may hold.
+func currentExecutable() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "simberth"
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		return resolved
+	}
+	return exe
 }
 
 // agentConfig is the JSON argument handed to the runner.
@@ -93,7 +112,15 @@ func ClaudeAgent(settings AgentSettings) AgentFunc {
 		}
 
 		cmd := exec.CommandContext(ctx, NodeBinary(), AgentEntrypoint(), string(payload))
-		cmd.Env = os.Environ()
+		// The agent calls back into this CLI for `ui describe`, so it is told
+		// exactly which binary to use. Inside the app bundle nothing is on PATH,
+		// and even outside it a stale `simberth` on PATH would be the wrong one.
+		cmd.Env = append(os.Environ(), "SIMBERTH_CLI="+currentExecutable())
+		if axe := strings.TrimSpace(os.Getenv("SIMBERTH_AXE")); axe == "" {
+			// Leave AXe to PATH resolution, but make the child's view explicit
+			// so a future override applies to both processes identically.
+			cmd.Env = append(cmd.Env, "SIMBERTH_AXE="+AXeBinary())
+		}
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
