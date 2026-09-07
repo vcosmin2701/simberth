@@ -205,3 +205,54 @@ func marshalLine(e Event) ([]byte, error) {
 	}
 	return append(data, '\n'), nil
 }
+
+// TestLeasePreparesConcurrently guards a regression that made setup dominate a
+// run: preparing simulators one after another meant four devices spent ~160s
+// booting serially before the first agent started, against ~65s of testing.
+// Slimming and booting are mostly waiting on the simulator, so they overlap.
+func TestLeasePreparesConcurrently(t *testing.T) {
+	const sims = 4
+	var inFlight, peak int64
+
+	// prepareHook stands in for the real slim+boot+install, which needs real
+	// simulators; the property under test is the scheduling, not the work.
+	restore := prepareHook
+	defer func() { prepareHook = restore }()
+	prepareHook = func(d Device) {
+		now := atomic.AddInt64(&inFlight, 1)
+		for {
+			old := atomic.LoadInt64(&peak)
+			if now <= old || atomic.CompareAndSwapInt64(&peak, old, now) {
+				break
+			}
+		}
+		time.Sleep(40 * time.Millisecond)
+		atomic.AddInt64(&inFlight, -1)
+	}
+
+	devices := make([]Device, sims)
+	for i := range devices {
+		devices[i] = Device{UDID: string(rune('A' + i)), Name: "sim", State: "Shutdown"}
+	}
+
+	orch := &Orchestrator{runDir: t.TempDir()}
+	orch.sink = func(e Event) { orch.mu.Lock(); orch.run.Apply(e); orch.mu.Unlock() }
+
+	leases, err := orch.leaseDevices(context.Background(), devices, RunOptions{}, "r")
+	if err != nil {
+		t.Fatalf("lease: %v", err)
+	}
+	if len(leases) != sims {
+		t.Fatalf("got %d leases, want %d", len(leases), sims)
+	}
+	if peak < sims {
+		t.Errorf("peak concurrent preparations = %d, want %d: simulators are being prepared serially", peak, sims)
+	}
+
+	// Order must survive the concurrency so the fleet reads the same each run.
+	for i, l := range leases {
+		if l.Device.UDID != devices[i].UDID {
+			t.Errorf("lease %d = %q, want %q: device order was not preserved", i, l.Device.UDID, devices[i].UDID)
+		}
+	}
+}

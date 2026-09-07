@@ -187,32 +187,68 @@ func (o *Orchestrator) driveOne(ctx context.Context, sim LeasedSim, opts RunOpti
 }
 
 // lease reserves simulators and prepares each one for its agent.
+//
+// Preparation runs concurrently. Slimming and booting a simulator takes tens of
+// seconds and is mostly waiting on the simulator, so doing them one after
+// another made setup dominate the run: four simulators spent ~160s booting
+// serially before the first agent could start, against ~65s of actual testing.
 func (o *Orchestrator) lease(ctx context.Context, opts RunOptions, runID string) ([]LeasedSim, error) {
 	devices, err := o.pickDevices(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
+	return o.leaseDevices(ctx, devices, opts, runID)
+}
 
-	leases := make([]LeasedSim, 0, len(devices))
-	for _, d := range devices {
+// leaseDevices prepares an already-chosen set of devices, concurrently.
+func (o *Orchestrator) leaseDevices(ctx context.Context, devices []Device, opts RunOptions, runID string) ([]LeasedSim, error) {
+	type result struct {
+		sim LeasedSim
+		err error
+	}
+	results := make([]result, len(devices))
+
+	var wg sync.WaitGroup
+	for i, d := range devices {
 		leased := NewEvent(runID, EventSimLeased)
 		leased.UDID = d.UDID
 		leased.SimName = d.Name
 		o.sink(leased)
 
-		sim, err := o.prepare(ctx, d, opts)
-		if err != nil {
-			// Release whatever was already prepared: a half-leased fleet would
-			// leave simulators booted and slimmed with nothing driving them.
-			o.release(context.WithoutCancel(ctx), leases, opts, runID)
-			return nil, fmt.Errorf("prepare %s (%s): %w", d.Name, d.UDID, err)
-		}
-		leases = append(leases, sim)
+		wg.Add(1)
+		go func(i int, d Device) {
+			defer wg.Done()
+			sim, err := o.prepare(ctx, d, opts)
+			results[i] = result{sim: sim, err: err}
+			if err != nil {
+				return
+			}
+			ready := NewEvent(runID, EventSimReady)
+			ready.UDID = d.UDID
+			ready.SimName = d.Name
+			o.sink(ready)
+		}(i, d)
+	}
+	wg.Wait()
 
-		ready := NewEvent(runID, EventSimReady)
-		ready.UDID = d.UDID
-		ready.SimName = d.Name
-		o.sink(ready)
+	// Collect in the original order so the fleet reads the same way every run.
+	leases := make([]LeasedSim, 0, len(devices))
+	var failure error
+	for i, r := range results {
+		if r.err != nil {
+			if failure == nil {
+				failure = fmt.Errorf("prepare %s (%s): %w", devices[i].Name, devices[i].UDID, r.err)
+			}
+			continue
+		}
+		leases = append(leases, r.sim)
+	}
+
+	if failure != nil {
+		// Release whatever did come up: a half-leased fleet would leave
+		// simulators booted and slimmed with nothing driving them.
+		o.release(context.WithoutCancel(ctx), leases, opts, runID)
+		return nil, failure
 	}
 	return leases, nil
 }
@@ -254,9 +290,17 @@ func (o *Orchestrator) pickDevices(ctx context.Context, opts RunOptions) ([]Devi
 	return available[:opts.SimCount], nil
 }
 
+// prepareHook is called at the start of prepare. It is nil in production and
+// set by tests that need to exercise scheduling without real simulators.
+var prepareHook func(Device)
+
 // prepare slims, boots, and installs the app under test.
 func (o *Orchestrator) prepare(ctx context.Context, d Device, opts RunOptions) (LeasedSim, error) {
 	sim := LeasedSim{Device: d, RunDir: o.runDir}
+	if prepareHook != nil {
+		prepareHook(d)
+		return sim, nil
+	}
 
 	if opts.Slim {
 		if _, err := EnableSlim(ctx, d.Set, d.UDID, opts.Profile, nil); err != nil {
