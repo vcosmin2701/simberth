@@ -295,6 +295,12 @@ func DeleteDevice(ctx context.Context, udid string) error {
 	return err
 }
 
+// BootStatusTimeout bounds the wait for a device's services to come up. It is
+// separate from BootTimeout because `simctl bootstatus` can hang indefinitely
+// on a device that is already Booted — seen most often when several simulators
+// boot at once — and one wedged wait must not stall a whole fleet.
+var BootStatusTimeout = 3 * time.Minute
+
 // bootAndWait boots the device (tolerating an already-booted one) and blocks on
 // bootstatus until its services are ready.
 func BootAndWait(ctx context.Context, set, udid string) error {
@@ -305,7 +311,23 @@ func BootAndWait(ctx context.Context, set, udid string) error {
 			return fmt.Errorf("simctl boot: %w: %s", err, msg)
 		}
 	}
-	_, err = xcrun(ctx, simctlArgs(set, "bootstatus", udid, "-b")...)
+
+	statusCtx, cancel := context.WithTimeout(ctx, BootStatusTimeout)
+	defer cancel()
+	_, err = xcrun(statusCtx, simctlArgs(set, "bootstatus", udid, "-b")...)
+	if err == nil {
+		return nil
+	}
+
+	// A bootstatus that times out is not necessarily a failed boot: the device
+	// is frequently up and usable while the wait itself is wedged. Fall back to
+	// the device's own state rather than failing a simulator that is ready.
+	if statusCtx.Err() == context.DeadlineExceeded && ctx.Err() == nil {
+		if d, findErr := FindDevice(ctx, udid, set); findErr == nil && d.State == "Booted" {
+			return nil
+		}
+		return fmt.Errorf("simctl bootstatus timed out after %s and %s is not booted", BootStatusTimeout, udid)
+	}
 	return err
 }
 
