@@ -8,6 +8,7 @@ package main
 // clean NDJSON.
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -77,7 +78,9 @@ func cmdRun(ctx context.Context, cmd *cli.Command) error {
 
 	// Under --json the event stream itself is the output, so nothing else may
 	// touch stdout. Otherwise events are rendered for a person on stderr.
-	encoder := json.NewEncoder(os.Stdout)
+	stdout := bufio.NewWriter(os.Stdout)
+	defer stdout.Flush()
+	encoder := json.NewEncoder(stdout)
 	// A step's summary rides on step.started; the matching finish carries only
 	// the outcome, so the renderer remembers it to print one complete line.
 	summaries := map[string]string{}
@@ -85,6 +88,9 @@ func cmdRun(ctx context.Context, cmd *cli.Command) error {
 	sink := func(e simberth.Event) {
 		if jsonOutput {
 			_ = encoder.Encode(e)
+			// Flushed per event: a consumer showing a run live must see each
+			// step as it happens, not when the buffer happens to fill.
+			_ = stdout.Flush()
 			return
 		}
 		mu.Lock()
@@ -115,8 +121,11 @@ func cmdRun(ctx context.Context, cmd *cli.Command) error {
 		printRunSummary(run)
 	}
 	// A failed scenario is a real result, but the process must exit non-zero so
-	// CI notices.
+	// CI notices. os.Exit skips deferred calls, so the final events -- including
+	// run.finished -- are flushed first; otherwise a consumer never learns the
+	// run ended and shows it as still running.
 	if run.Status != simberth.RunPassed {
+		_ = stdout.Flush()
 		os.Exit(1)
 	}
 	return nil
