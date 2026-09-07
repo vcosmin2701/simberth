@@ -91,6 +91,7 @@ simberth verify <udid> --profile ci.json   # exact profile match; non-zero on dr
 simberth doctor <udid> --requires push,storekit,universal-links
 simberth run --scenario "..." --sims 4   # drive N simulators with agents
 simberth replay runs/<id>/replay-<udid>.json   # re-run it deterministically, no model
+simberth mirror                          # live screens of every booted simulator
 simberth ui describe <udid>   # the actionable elements on screen
 simberth ui tap <udid> --label "Sign In"
 simberth measure <udid>   # a booted simulator's memory footprint
@@ -262,6 +263,21 @@ The agent reads the screen through the accessibility tree rather than pixels,
 and simberth distills that tree before the model sees it: a stock iOS home
 screen is ~113k tokens of raw JSON but ~1.5k once reduced to the elements you
 can actually act on. That 75x difference is what makes a turn affordable.
+
+### Watching the fleet
+
+The Runs tab shows a live screen per simulator, so you watch the phones rather
+than read a step list. Frames come from `axe stream-video` as MJPEG, defaulting
+to 5 fps at 40% scale — small enough that a dozen streams cost little, large
+enough to stay readable when tiled.
+
+The same stream is available from the command line:
+
+```sh
+simberth mirror                          # every booted simulator, frames on stdout
+simberth mirror --out /tmp/fleet         # newest frame per simulator, as files
+simberth mirror --fps 10 --scale 1.0 <udid>
+```
 
 An agent must end with a verdict it can justify from what it saw:
 

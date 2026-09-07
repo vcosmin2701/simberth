@@ -57,6 +57,13 @@ final class RunsModel: ObservableObject {
     isRunning = false
   }
 
+  /// Simulators that are booted and worth mirroring. Driven off the run's sims
+  /// so mirroring starts as soon as the fleet is ready and stops when it ends.
+  var readySimUDIDs: [String] {
+    guard let run, !run.isFinished else { return [] }
+    return run.sims.map(\.udid)
+  }
+
   var selectedSim: SimRun? {
     guard let selectedUDID else { return run?.sims.first }
     return run?.sims.first { $0.udid == selectedUDID }
@@ -65,6 +72,7 @@ final class RunsModel: ObservableObject {
 
 struct RunsView: View {
   @StateObject private var model = RunsModel()
+  @StateObject private var mirror = MirrorSession.shared
 
   var body: some View {
     HSplitView {
@@ -82,6 +90,16 @@ struct RunsView: View {
     .alert(item: $model.failure) { error in
       Alert(title: Text("Run failed"), message: Text(error.message))
     }
+    // Mirroring follows the fleet: it starts once the simulators are booted and
+    // stops when the run ends, so no capture process outlives what it shows.
+    .onChange(of: model.readySimUDIDs) { _, udids in
+      if udids.isEmpty {
+        mirror.stop()
+      } else {
+        mirror.start(udids: udids)
+      }
+    }
+    .onDisappear { mirror.stop() }
   }
 
   // MARK: scenario
@@ -176,23 +194,36 @@ struct RunsView: View {
   private var fleet: some View {
     Group {
       if let run = model.run, !run.sims.isEmpty {
-        ScrollView {
-          LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 190), spacing: 12)],
-            spacing: 12
-          ) {
-            ForEach(run.sims) { sim in
-              SimCard(sim: sim, isSelected: sim.udid == model.selectedUDID)
-                .onTapGesture { model.selectedUDID = sim.udid }
-            }
-          }
-          .padding(16)
-        }
+        fleetGrid(for: run.sims)
       } else {
         emptyFleet
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  private static let fleetColumns = [GridItem(.adaptive(minimum: 200), spacing: 12)]
+
+  // Split out of `fleet` because the inlined grid, cards and gesture together
+  // exceeded what the type-checker would solve in reasonable time.
+  private func fleetGrid(for sims: [SimRun]) -> some View {
+    ScrollView {
+      LazyVGrid(columns: Self.fleetColumns, spacing: 12) {
+        ForEach(sims) { sim in
+          card(for: sim)
+        }
+      }
+      .padding(16)
+    }
+  }
+
+  private func card(for sim: SimRun) -> some View {
+    SimCard(
+      sim: sim,
+      screen: mirror.screens[sim.udid],
+      isSelected: sim.udid == model.selectedUDID
+    )
+    .onTapGesture { model.selectedUDID = sim.udid }
   }
 
   private var emptyFleet: some View {
@@ -275,18 +306,28 @@ struct RunsView: View {
   }
 }
 
+/// One simulator in the fleet: its live screen, who it is, and what it is doing.
+/// The screen is the point — a run is far easier to follow by watching the
+/// phones than by reading a step list.
 private struct SimCard: View {
   let sim: SimRun
+  let screen: NSImage?
   let isSelected: Bool
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
+      screenView
+
       HStack(spacing: 6) {
         Image(systemName: sim.status.systemImage)
           .foregroundStyle(color(for: sim.status))
         Text(sim.simName)
           .font(.callout.bold())
           .lineLimit(1)
+        Spacer()
+        if sim.status == .running {
+          ProgressView().controlSize(.small)
+        }
       }
 
       Text(sim.currentStep?.summary ?? "waiting…")
@@ -296,28 +337,55 @@ private struct SimCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 28, alignment: .top)
 
-      HStack {
-        Text("\(sim.passedSteps)/\(sim.steps.count) steps")
-          .font(.caption)
-          .foregroundStyle(.tertiary)
-          .monospacedDigit()
-        Spacer()
-        if sim.status == .running {
-          ProgressView().controlSize(.small)
-        }
-      }
+      Text("\(sim.passedSteps)/\(sim.steps.count) steps")
+        .font(.caption)
+        .foregroundStyle(.tertiary)
+        .monospacedDigit()
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color(nsColor: .controlBackgroundColor))
-    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .clipShape(RoundedRectangle(cornerRadius: 10))
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      RoundedRectangle(cornerRadius: 10)
         .stroke(
           isSelected ? Color.accentColor : Color(nsColor: .separatorColor),
           lineWidth: isSelected ? 2 : 1)
     )
     .contentShape(Rectangle())
+  }
+
+  /// The live screen, in a phone-shaped frame. Until the first frame arrives
+  /// the placeholder holds the same aspect ratio, so the grid never reflows.
+  private var screenView: some View {
+    ZStack {
+      RoundedRectangle(cornerRadius: 12)
+        .fill(Color.black)
+
+      if let screen {
+        Image(nsImage: screen)
+          .resizable()
+          .interpolation(.medium)
+          .aspectRatio(contentMode: .fit)
+          .clipShape(RoundedRectangle(cornerRadius: 12))
+          .transition(.opacity)
+      } else {
+        VStack(spacing: 6) {
+          Image(systemName: "iphone")
+            .font(.system(size: 22))
+            .foregroundStyle(.tertiary)
+          Text(sim.status == .running ? "connecting…" : "no signal")
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+        }
+      }
+    }
+    .aspectRatio(0.46, contentMode: .fit)
+    .frame(maxWidth: .infinity)
+    .overlay(
+      RoundedRectangle(cornerRadius: 12)
+        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+    )
   }
 }
 

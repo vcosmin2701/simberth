@@ -111,6 +111,7 @@ xcrun swiftc \
   "$ROOT_DIR/gui/RunModels.swift" \
   "$ROOT_DIR/gui/Backend.swift" \
   "$ROOT_DIR/gui/RunBackend.swift" \
+  "$ROOT_DIR/gui/MirrorBackend.swift" \
   "$ROOT_DIR/gui/AppModel.swift" \
   "$ROOT_DIR/gui/SimulatorManagementViews.swift" \
   "$ROOT_DIR/gui/RunsView.swift" \

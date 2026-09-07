@@ -42,6 +42,7 @@ func newApp() *cli.Command {
 		uiCommand(jsonFlag),
 		runCommand(jsonFlag),
 		replayCommand(jsonFlag),
+		mirrorCommand(jsonFlag),
 		{Name: "top", Flags: []cli.Flag{jsonFlag()}, Action: cmdTop},
 		{Name: "size", Flags: []cli.Flag{jsonFlag()}, Action: cmdSize},
 		{Name: "disk-categories", Flags: []cli.Flag{jsonFlag()}, Action: cmdDiskCategories},
